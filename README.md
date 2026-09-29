@@ -45,6 +45,27 @@ opencode-notify.exe install
 
 Restart OpenCode.
 
+### Options shared by both paths
+
+Custom plugins directory (both paths accept it; the CLI flag works with
+`install`, `uninstall`, `doctor`, and `test`):
+
+```powershell
+.\install.ps1 -PluginsDir "C:\path\to\plugins"
+opencode-notify.exe install --plugins-dir "C:\path\to\plugins"
+```
+
+Run from a local clone, `.\install.ps1` uses the checkout's `plugin\` file and
+downloads nothing.
+
+### Build the CLI from source (optional)
+
+Requires Go 1.27+:
+
+```powershell
+go build -o opencode-notify.exe ./cmd/opencode-notify
+```
+
 ## Verify
 
 ```powershell
@@ -72,6 +93,10 @@ or re-run the PowerShell script with `-Uninstall`.
 
 - **No notifications** — run `opencode-notify.exe doctor`; it reports exactly what is
   missing (plugin file or AUMID registration).
+- **Manual AUMID check** — the identity lives at
+  `HKCU\Software\Classes\AppUserModelId\OpenCode.Notifier`
+  (`DisplayName=OpenCode`). Both installers manage it; you should never need to
+  touch it by hand.
 - **Focus Assist / Do Not Disturb** — Windows silently suppresses toasts while these
   are enabled. Check Settings > System > Notifications.
 - **Debug log** — the plugin writes debug info to
