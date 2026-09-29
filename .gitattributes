@@ -1,0 +1,13 @@
+# Normalize line endings so every checkout (Windows, Linux, CI) sees
+# identical bytes: gofmt stays green and install hashes match across
+# the download path (LF blobs) and local checkouts.
+* text=auto
+*.go text eol=lf
+*.ps1 text eol=lf
+*.js text eol=lf
+*.md text eol=lf
+*.yml text eol=lf
+*.mod text eol=lf
+*.sum text eol=lf
+.gitattributes text eol=lf
+.gitignore text eol=lf
