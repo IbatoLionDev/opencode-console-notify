@@ -1,8 +1,6 @@
 // Package config resolves where the plugin file lives.
 package config
 
-// paths.go resolves where the plugin file lives.
-
 import (
 	"errors"
 	"os"

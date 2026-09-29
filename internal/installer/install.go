@@ -1,8 +1,6 @@
 // Package installer implements the install and uninstall commands.
 package installer
 
-// install.go implements the install and uninstall commands.
-
 import (
 	"crypto/sha256"
 	"fmt"

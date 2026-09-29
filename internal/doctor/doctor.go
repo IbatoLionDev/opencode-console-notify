@@ -3,10 +3,6 @@
 // which install path produced it.
 package doctor
 
-// doctor.go is the parity gate: it verifies the SAME end state as
-// install.ps1 (plugin file present + AUMID registered) regardless of
-// which install path produced it.
-
 import (
 	"fmt"
 	"io"

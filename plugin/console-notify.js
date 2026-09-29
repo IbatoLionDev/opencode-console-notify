@@ -18,9 +18,8 @@
  * remains a valid fallback if auto-registration is ever blocked.
  */
 
-import { basename } from "node:path"
 import { appendFileSync } from "node:fs"
-import { join } from "node:path"
+import { basename, join } from "node:path"
 
 const AUMID = "OpenCode.Notifier"
 const COOLDOWN_MS = 4000
@@ -33,6 +32,19 @@ function dbg(message) {
   } catch {
     // Debug logging must never break anything.
   }
+}
+
+// windowsHide (Win32 CREATE_NO_WINDOW) is load-bearing, NOT cosmetic:
+// without it PowerShell inherits our console window and `-WindowStyle Hidden`
+// runs ShowWindow(GetConsoleWindow(), SW_HIDE) on the USER's console window,
+// which is what made a maximized console vanish on every notification.
+// With CREATE_NO_WINDOW the child gets its own console with no window, so
+// there is nothing to flash and nothing shared to hide.
+function spawnHiddenPowerShell(encoded) {
+  return Bun.spawn(
+    ["powershell.exe", "-NoProfile", "-NonInteractive", "-EncodedCommand", encoded],
+    { stdin: "ignore", stdout: "ignore", stderr: "ignore", windowsHide: true },
+  )
 }
 
 /**
@@ -51,17 +63,8 @@ function ensureAumidRegistered() {
   ].join("\n")
   // UTF-16LE base64 avoids every shell-quoting pitfall between Bun and PowerShell.
   const encoded = Buffer.from(script, "utf16le").toString("base64")
-  // windowsHide (Win32 CREATE_NO_WINDOW) is load-bearing, NOT cosmetic:
-  // without it PowerShell inherits our console window and `-WindowStyle Hidden`
-  // runs ShowWindow(GetConsoleWindow(), SW_HIDE) on the USER's console window,
-  // which is what made a maximized console vanish on every notification.
-  // With CREATE_NO_WINDOW the child gets its own console with no window, so
-  // there is nothing to flash and nothing shared to hide.
   try {
-    const proc = Bun.spawn(
-      ["powershell.exe", "-NoProfile", "-NonInteractive", "-EncodedCommand", encoded],
-      { stdin: "ignore", stdout: "ignore", stderr: "ignore", windowsHide: true },
-    )
+    const proc = spawnHiddenPowerShell(encoded)
     Promise.resolve(proc.exited).then(
       (code) => {
         if (code !== 0) dbg(`aumid FAIL key=${key} exit=${code}`)
@@ -79,11 +82,14 @@ const lastSent = new Map()
 const childCache = new Map()
 
 // XML 1.0 forbids C0/C1 controls and lone surrogates; one illegal character makes LoadXml throw and the toast is lost.
+function isXmlCodePointAllowed(cp) {
+  return cp === 9 || cp === 10 || cp === 13 || (cp >= 32 && cp <= 0x7e) || (cp >= 0xa0 && cp <= 0xd7ff) || (cp >= 0xe000 && cp <= 0xfffd) || (cp >= 0x10000 && cp <= 0x10ffff)
+}
+
 function xmlSafe(value) {
   let out = ""
   for (const ch of String(value)) {
-    const cp = ch.codePointAt(0)
-    if (cp === 9 || cp === 10 || cp === 13 || (cp >= 32 && cp <= 0x7e) || (cp >= 0xa0 && cp <= 0xd7ff) || (cp >= 0xe000 && cp <= 0xfffd) || (cp >= 0x10000 && cp <= 0x10ffff)) out += ch
+    if (isXmlCodePointAllowed(ch.codePointAt(0))) out += ch
   }
   return out
 }
@@ -122,17 +128,8 @@ function sendToast(title, lines, tag) {
   ].join("\n")
   // UTF-16LE base64 avoids every shell-quoting pitfall between Bun and PowerShell.
   const encoded = Buffer.from(script, "utf16le").toString("base64")
-  // windowsHide (Win32 CREATE_NO_WINDOW) is load-bearing, NOT cosmetic:
-  // without it PowerShell inherits our console window and `-WindowStyle Hidden`
-  // runs ShowWindow(GetConsoleWindow(), SW_HIDE) on the USER's console window,
-  // which is what made a maximized console vanish on every notification.
-  // With CREATE_NO_WINDOW the child gets its own console with no window, so
-  // there is nothing to flash and nothing shared to hide.
   try {
-    const proc = Bun.spawn(
-      ["powershell.exe", "-NoProfile", "-NonInteractive", "-EncodedCommand", encoded],
-      { stdin: "ignore", stdout: "ignore", stderr: "ignore", windowsHide: true },
-    )
+    const proc = spawnHiddenPowerShell(encoded)
     Promise.resolve(proc.exited).then(
       (code) => {
         if (code !== 0) dbg(`toast FAIL tag=${tag} exit=${code}`)
