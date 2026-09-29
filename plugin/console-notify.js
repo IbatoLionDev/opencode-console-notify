@@ -70,10 +70,10 @@ function ensureAumidRegistered() {
         if (code !== 0) dbg(`aumid FAIL key=${key} exit=${code}`)
         else dbg(`aumid OK key=${key}`)
       },
-      (err) => dbg(`aumid FAIL key=${key} err=${String(err && err.message ? err.message : err)}`),
+      (err) => dbg(`aumid FAIL key=${key} err=${String(err?.message ?? err)}`),
     )
   } catch (err) {
-    dbg(`aumid THREW key=${key} err=${String(err && err.message ? err.message : err)}`)
+    dbg(`aumid THREW key=${key} err=${String(err?.message ?? err)}`)
   }
 }
 ensureAumidRegistered()
@@ -134,10 +134,10 @@ function sendToast(title, lines, tag) {
       (code) => {
         if (code !== 0) dbg(`toast FAIL tag=${tag} exit=${code}`)
       },
-      (err) => dbg(`toast FAIL tag=${tag} err=${String(err && err.message ? err.message : err)}`),
+      (err) => dbg(`toast FAIL tag=${tag} err=${String(err?.message ?? err)}`),
     )
   } catch (err) {
-    dbg(`toast THREW tag=${tag} err=${String(err && err.message ? err.message : err)}`)
+    dbg(`toast THREW tag=${tag} err=${String(err?.message ?? err)}`)
   }
 }
 
@@ -171,39 +171,40 @@ export default async ({ client, $, directory }) => {
     sendToast(title, lines, key.split(":")[0])
   }
 
+  const handleIdle = async (p) => {
+    if (await isChild(p.sessionID)) return
+    notify(`idle:${p.sessionID ?? "unknown"}`, ["Task finished \u2014 waiting for your input"])
+  }
+
+  const handleError = async (p) => {
+    if (await isChild(p.sessionID)) return
+    const detail = typeof p.error === "string" ? truncate(p.error) : ""
+    notify(`error:${p.sessionID ?? "unknown"}`, ["Something went wrong \u2014 check the console", detail])
+  }
+
+  const handlePermission = (p) => {
+    notify(`perm:${p.id ?? p.sessionID ?? "unknown"}`, ["Permission needed to continue"])
+  }
+
+  const handleQuestion = (p) => {
+    const raw = Array.isArray(p.questions) ? p.questions[0]?.question : undefined
+    notify(`question:${p.id ?? p.sessionID ?? "unknown"}`, [
+      "OpenCode asked you a question",
+      raw ? truncate(raw) : "",
+    ])
+  }
+
   return {
     event: async ({ event }) => {
       try {
         const p = event.properties ?? {}
-
-        if (event.type === "session.idle") {
-          if (await isChild(p.sessionID)) return
-          notify(`idle:${p.sessionID ?? "unknown"}`, ["Task finished \u2014 waiting for your input"])
-          return
-        }
-
-        if (event.type === "session.error") {
-          if (await isChild(p.sessionID)) return
-          const detail = typeof p.error === "string" ? truncate(p.error) : ""
-          notify(`error:${p.sessionID ?? "unknown"}`, ["Something went wrong \u2014 check the console", detail])
-          return
-        }
-
-        if (event.type === "permission.asked") {
-          notify(`perm:${p.id ?? p.sessionID ?? "unknown"}`, ["Permission needed to continue"])
-          return
-        }
-
-        if (event.type === "question.asked") {
-          const raw = Array.isArray(p.questions) ? p.questions[0]?.question : undefined
-          notify(`question:${p.id ?? p.sessionID ?? "unknown"}`, [
-            "OpenCode asked you a question",
-            raw ? truncate(raw) : "",
-          ])
-        }
+        if (event.type === "session.idle") return handleIdle(p)
+        if (event.type === "session.error") return handleError(p)
+        if (event.type === "permission.asked") return handlePermission(p)
+        if (event.type === "question.asked") return handleQuestion(p)
       } catch (err) {
         // Notifications must never break the event pipeline.
-        dbg(`EVENT handler error type=${event?.type} err=${String(err && err.message ? err.message : err)}`)
+        dbg(`EVENT handler error type=${event?.type} err=${String(err?.message ?? err)}`)
       }
     },
   }
