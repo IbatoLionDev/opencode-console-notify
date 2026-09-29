@@ -1,4 +1,4 @@
-package main
+package cli
 
 // toast.go sends a real Windows toast for the test command.
 // It shells out to PowerShell with a UTF-16LE base64 payload, the same

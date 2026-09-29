@@ -1,4 +1,4 @@
-package main
+package cli
 
 import (
 	"bytes"
@@ -106,18 +106,18 @@ func TestRunDoctorEndToEnd(t *testing.T) {
 	reg := &FakeRegistry{}
 	var out, errOut bytes.Buffer
 
-	if code := run([]string{"doctor", "--plugins-dir", plugins}, reg, &out, &errOut); code == 0 {
+	if code := Run([]string{"doctor", "--plugins-dir", plugins}, reg, &out, &errOut); code == 0 {
 		t.Fatal("run doctor before install must exit non-zero")
 	}
-	if code := run([]string{"install", "--plugins-dir", plugins}, reg, &out, &errOut); code != 0 {
+	if code := Run([]string{"install", "--plugins-dir", plugins}, reg, &out, &errOut); code != 0 {
 		t.Fatalf("run install exited %d: %s", code, errOut.String())
 	}
 	out.Reset()
-	if code := run([]string{"doctor", "--plugins-dir", plugins}, reg, &out, &errOut); code != 0 {
+	if code := Run([]string{"doctor", "--plugins-dir", plugins}, reg, &out, &errOut); code != 0 {
 		t.Fatalf("run doctor after install exited %d:\n%s", code, out.String())
 	}
 	out.Reset()
-	if code := run([]string{"uninstall", "--plugins-dir", plugins}, reg, &out, &errOut); code != 0 {
+	if code := Run([]string{"uninstall", "--plugins-dir", plugins}, reg, &out, &errOut); code != 0 {
 		t.Fatalf("run uninstall exited %d: %s", code, errOut.String())
 	}
 }

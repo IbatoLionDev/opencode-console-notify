@@ -1,4 +1,4 @@
-package main
+package cli
 
 // install.go implements the install and uninstall commands.
 

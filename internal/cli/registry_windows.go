@@ -1,6 +1,6 @@
 //go:build windows
 
-package main
+package cli
 
 // registry_windows.go is the real HKCU-backed Registry implementation.
 // HKCU-only: no admin rights are ever required.

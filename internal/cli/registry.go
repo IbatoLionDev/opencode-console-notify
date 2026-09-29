@@ -1,4 +1,4 @@
-package main
+package cli
 
 // registry.go declares the AUMID registry boundary.
 //

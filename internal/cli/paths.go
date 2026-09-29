@@ -1,4 +1,4 @@
-package main
+package cli
 
 // paths.go resolves where the plugin file lives.
 

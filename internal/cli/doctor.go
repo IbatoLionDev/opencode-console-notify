@@ -1,4 +1,4 @@
-package main
+package cli
 
 // doctor.go is the parity gate: it verifies the SAME end state as
 // install.ps1 (plugin file present + AUMID registered) regardless of

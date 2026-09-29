@@ -1,11 +1,10 @@
-// Command opencode-notify installs, checks, and exercises the
-// opencode-console-notify Windows toast plugin without admin rights.
-package main
+// Package cli implements the opencode-notify commands (install, uninstall,
+// doctor, test) shared by the CLI entry point without admin rights.
+package cli
 
 import (
 	"fmt"
 	"io"
-	"os"
 	"strings"
 )
 
@@ -65,9 +64,9 @@ func parseArgs(args []string) (command string, pluginsDir string, err error) {
 	}
 }
 
-// run executes the CLI; it returns the process exit code so tests can
+// Run executes the CLI; it returns the process exit code so tests can
 // assert on it without spawning a subprocess.
-func run(args []string, reg Registry, stdout, stderr io.Writer) int {
+func Run(args []string, reg Registry, stdout, stderr io.Writer) int {
 	command, override, err := parseArgs(args)
 	if err == io.EOF {
 		fmt.Fprint(stdout, usageText)
@@ -116,6 +115,3 @@ func run(args []string, reg Registry, stdout, stderr io.Writer) int {
 	}
 }
 
-func main() {
-	os.Exit(run(os.Args[1:], NewRegistry(), os.Stdout, os.Stderr))
-}

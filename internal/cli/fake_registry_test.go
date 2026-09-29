@@ -1,4 +1,4 @@
-package main
+package cli
 
 // fake_registry_test.go provides the hermetic Registry double used by
 // every test, so the suite never touches the real HKCU hive.
