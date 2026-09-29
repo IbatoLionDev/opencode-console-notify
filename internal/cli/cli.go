@@ -29,6 +29,20 @@ Options:
                       Default: <HOME>/.config/opencode/plugins
 `
 
+const errorFormat = "Error: %s\n"
+
+// splitPluginsDirFlag extracts the value from the "--plugins-dir=DIR"
+// and "-plugins-dir=DIR" equals forms.
+func splitPluginsDirFlag(arg string) (string, bool) {
+	if v, ok := strings.CutPrefix(arg, "--plugins-dir="); ok {
+		return v, true
+	}
+	if v, ok := strings.CutPrefix(arg, "-plugins-dir="); ok {
+		return v, true
+	}
+	return "", false
+}
+
 // parseArgs extracts the subcommand and the --plugins-dir override.
 // The flag is accepted before or after the command, as
 // "--plugins-dir DIR" or "--plugins-dir=DIR" (single-dash form too).
@@ -43,11 +57,7 @@ func parseArgs(args []string) (command string, pluginsDir string, err error) {
 			pluginsDir = args[i]
 			continue
 		}
-		if v, ok := strings.CutPrefix(arg, "--plugins-dir="); ok {
-			pluginsDir = v
-			continue
-		}
-		if v, ok := strings.CutPrefix(arg, "-plugins-dir="); ok {
+		if v, ok := splitPluginsDirFlag(arg); ok {
 			pluginsDir = v
 			continue
 		}
@@ -89,20 +99,20 @@ func Run(args []string, reg aumid.Registry, stdout, stderr io.Writer) int {
 
 	pluginsDir, err := config.ResolvePluginsDir(override)
 	if err != nil {
-		fmt.Fprintf(stderr, "Error: %s\n", err)
+		fmt.Fprintf(stderr, errorFormat, err)
 		return 2
 	}
 
 	switch command {
 	case "install":
 		if err := installer.Install(pluginsDir, reg, stdout); err != nil {
-			fmt.Fprintf(stderr, "Error: %s\n", err)
+			fmt.Fprintf(stderr, errorFormat, err)
 			return 1
 		}
 		return 0
 	case "uninstall":
 		if err := installer.Uninstall(pluginsDir, reg, stdout); err != nil {
-			fmt.Fprintf(stderr, "Error: %s\n", err)
+			fmt.Fprintf(stderr, errorFormat, err)
 			return 1
 		}
 		return 0
@@ -110,7 +120,7 @@ func Run(args []string, reg aumid.Registry, stdout, stderr io.Writer) int {
 		return doctor.Doctor(pluginsDir, reg, stdout)
 	case "test":
 		if err := notifier.SendTestToast(reg); err != nil {
-			fmt.Fprintf(stderr, "Error: %s\n", err)
+			fmt.Fprintf(stderr, errorFormat, err)
 			return 1
 		}
 		fmt.Fprintf(stdout, "Sent test notification via %s.\n", aumid.AUMID)

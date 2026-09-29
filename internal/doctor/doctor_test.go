@@ -16,6 +16,33 @@ import (
 
 var errTestBoom = errors.New("test registry failure")
 
+func seedPluginFileForHealth(t *testing.T, plugins string, seedFile, seedEmpty bool) {
+	t.Helper()
+	if !seedFile {
+		return
+	}
+	content := plugin.Source
+	if seedEmpty {
+		content = []byte{}
+	}
+	if err := os.WriteFile(config.PluginPath(plugins), content, 0o644); err != nil {
+		t.Fatalf("seed plugin file: %v", err)
+	}
+}
+
+func assertHealthReport(t *testing.T, report HealthReport, wantHealthy, wantPlugin, wantAUMID bool) {
+	t.Helper()
+	if report.Healthy() != wantHealthy {
+		t.Fatalf("Healthy() = %v, want %v (%+v)", report.Healthy(), wantHealthy, report)
+	}
+	if report.PluginOK != wantPlugin {
+		t.Fatalf("PluginOK = %v, want %v", report.PluginOK, wantPlugin)
+	}
+	if report.AUMIDOK != wantAUMID {
+		t.Fatalf("AUMIDOK = %v, want %v", report.AUMIDOK, wantAUMID)
+	}
+}
+
 func TestCheckHealthParityMatrix(t *testing.T) {
 	tests := []struct {
 		name        string
@@ -35,30 +62,14 @@ func TestCheckHealthParityMatrix(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			plugins := t.TempDir()
-			if tt.seedFile {
-				content := plugin.Source
-				if tt.seedEmpty {
-					content = []byte{}
-				}
-				if err := os.WriteFile(config.PluginPath(plugins), content, 0o644); err != nil {
-					t.Fatalf("seed plugin file: %v", err)
-				}
-			}
+			seedPluginFileForHealth(t, plugins, tt.seedFile, tt.seedEmpty)
 			reg := &aumid.FakeRegistry{Registered: tt.registered, DisplayName: aumid.AUMIDDisplayName}
 
 			report, err := CheckHealth(plugins, reg)
 			if err != nil {
 				t.Fatalf("CheckHealth failed: %v", err)
 			}
-			if report.Healthy() != tt.wantHealthy {
-				t.Fatalf("Healthy() = %v, want %v (%+v)", report.Healthy(), tt.wantHealthy, report)
-			}
-			if report.PluginOK != tt.wantPlugin {
-				t.Fatalf("PluginOK = %v, want %v", report.PluginOK, tt.wantPlugin)
-			}
-			if report.AUMIDOK != tt.wantAUMID {
-				t.Fatalf("AUMIDOK = %v, want %v", report.AUMIDOK, tt.wantAUMID)
-			}
+			assertHealthReport(t, report, tt.wantHealthy, tt.wantPlugin, tt.wantAUMID)
 		})
 	}
 }
