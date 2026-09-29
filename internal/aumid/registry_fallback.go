@@ -1,6 +1,6 @@
 //go:build !windows
 
-package cli
+package aumid
 
 // registry_fallback.go is the non-Windows Registry stub. The CLI is
 // Windows-only in v1; this keeps the package compiling elsewhere.

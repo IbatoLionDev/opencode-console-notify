@@ -1,28 +1,35 @@
-package cli
+package installer
 
 import (
 	"bytes"
+	"errors"
 	"os"
 	"path/filepath"
 	"strings"
 	"testing"
+
+	"github.com/IbatoLionDev/opencode-console-notify/internal/aumid"
+	"github.com/IbatoLionDev/opencode-console-notify/internal/config"
+	"github.com/IbatoLionDev/opencode-console-notify/plugin"
 )
+
+var errTestBoom = errors.New("test registry failure")
 
 func TestInstallWritesEmbeddedPluginAtomically(t *testing.T) {
 	dir := t.TempDir()
 	plugins := filepath.Join(dir, "plugins")
-	reg := &FakeRegistry{}
+	reg := &aumid.FakeRegistry{}
 
 	var out bytes.Buffer
 	if err := Install(plugins, reg, &out); err != nil {
 		t.Fatalf("Install failed: %v", err)
 	}
 
-	got, err := os.ReadFile(PluginPath(plugins))
+	got, err := os.ReadFile(config.PluginPath(plugins))
 	if err != nil {
 		t.Fatalf("read installed file: %v", err)
 	}
-	if !bytes.Equal(got, pluginSource) {
+	if !bytes.Equal(got, plugin.Source) {
 		t.Fatal("installed file differs from embedded plugin source")
 	}
 
@@ -35,7 +42,7 @@ func TestInstallWritesEmbeddedPluginAtomically(t *testing.T) {
 		t.Fatalf("leftover temp files: %v", leftovers)
 	}
 
-	if !reg.registered {
+	if !reg.Registered {
 		t.Fatal("Install did not register the AUMID")
 	}
 	for _, want := range []string{"Installed:", "SHA256:", "AUMID:"} {
@@ -47,34 +54,34 @@ func TestInstallWritesEmbeddedPluginAtomically(t *testing.T) {
 
 func TestInstallIsIdempotent(t *testing.T) {
 	plugins := t.TempDir()
-	reg := &FakeRegistry{}
+	reg := &aumid.FakeRegistry{}
 
 	var first, second bytes.Buffer
 	if err := Install(plugins, reg, &first); err != nil {
 		t.Fatalf("first Install failed: %v", err)
 	}
-	before, err := os.ReadFile(PluginPath(plugins))
+	before, err := os.ReadFile(config.PluginPath(plugins))
 	if err != nil {
 		t.Fatalf("read after first install: %v", err)
 	}
 	if err := Install(plugins, reg, &second); err != nil {
 		t.Fatalf("second Install failed: %v", err)
 	}
-	after, err := os.ReadFile(PluginPath(plugins))
+	after, err := os.ReadFile(config.PluginPath(plugins))
 	if err != nil {
 		t.Fatalf("read after second install: %v", err)
 	}
 	if !bytes.Equal(before, after) {
 		t.Fatal("re-install changed the plugin file content")
 	}
-	if reg.ensureCalls != 2 {
-		t.Fatalf("expected 2 EnsureAUMID calls, got %d", reg.ensureCalls)
+	if reg.EnsureCalls != 2 {
+		t.Fatalf("expected 2 EnsureAUMID calls, got %d", reg.EnsureCalls)
 	}
 }
 
 func TestInstallPropagatesRegistryError(t *testing.T) {
 	plugins := t.TempDir()
-	reg := &FakeRegistry{ensureErr: errTestBoom}
+	reg := &aumid.FakeRegistry{EnsureErr: errTestBoom}
 	if err := Install(plugins, reg, &bytes.Buffer{}); err == nil {
 		t.Fatal("expected registry error, got nil")
 	}
@@ -86,26 +93,26 @@ func TestUninstallRemovesOnlyItsOwnFile(t *testing.T) {
 	if err := os.WriteFile(keep, []byte("// bystander"), 0o644); err != nil {
 		t.Fatalf("seed bystander file: %v", err)
 	}
-	if err := os.WriteFile(PluginPath(plugins), pluginSource, 0o644); err != nil {
+	if err := os.WriteFile(config.PluginPath(plugins), plugin.Source, 0o644); err != nil {
 		t.Fatalf("seed plugin file: %v", err)
 	}
-	reg := &FakeRegistry{registered: true, displayName: AUMIDDisplayName}
+	reg := &aumid.FakeRegistry{Registered: true, DisplayName: aumid.AUMIDDisplayName}
 
 	var out bytes.Buffer
 	if err := Uninstall(plugins, reg, &out); err != nil {
 		t.Fatalf("Uninstall failed: %v", err)
 	}
 
-	if _, err := os.Stat(PluginPath(plugins)); !os.IsNotExist(err) {
+	if _, err := os.Stat(config.PluginPath(plugins)); !os.IsNotExist(err) {
 		t.Fatal("plugin file was not removed")
 	}
 	if _, err := os.Stat(keep); err != nil {
 		t.Fatalf("bystander file must survive uninstall: %v", err)
 	}
-	if reg.registered {
+	if reg.Registered {
 		t.Fatal("AUMID key was not removed")
 	}
-	if reg.removedParent {
+	if reg.RemovedParent {
 		t.Fatal("uninstall must never touch parent keys")
 	}
 	if !strings.Contains(out.String(), "Uninstall complete") {
@@ -115,7 +122,7 @@ func TestUninstallRemovesOnlyItsOwnFile(t *testing.T) {
 
 func TestUninstallIsIdempotentWhenNothingInstalled(t *testing.T) {
 	plugins := t.TempDir()
-	reg := &FakeRegistry{}
+	reg := &aumid.FakeRegistry{}
 
 	var out bytes.Buffer
 	if err := Uninstall(plugins, reg, &out); err != nil {
@@ -128,7 +135,7 @@ func TestUninstallIsIdempotentWhenNothingInstalled(t *testing.T) {
 
 func TestUninstallPropagatesRegistryError(t *testing.T) {
 	plugins := t.TempDir()
-	reg := &FakeRegistry{removeErr: errTestBoom}
+	reg := &aumid.FakeRegistry{RemoveErr: errTestBoom}
 	if err := Uninstall(plugins, reg, &bytes.Buffer{}); err == nil {
 		t.Fatal("expected registry error, got nil")
 	}

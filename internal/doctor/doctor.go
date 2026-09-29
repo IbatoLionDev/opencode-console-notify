@@ -1,4 +1,7 @@
-package cli
+// Package doctor is the parity gate: it verifies the SAME end state as
+// install.ps1 (plugin file present + AUMID registered) regardless of
+// which install path produced it.
+package doctor
 
 // doctor.go is the parity gate: it verifies the SAME end state as
 // install.ps1 (plugin file present + AUMID registered) regardless of
@@ -8,6 +11,9 @@ import (
 	"fmt"
 	"io"
 	"os"
+
+	"github.com/IbatoLionDev/opencode-console-notify/internal/aumid"
+	"github.com/IbatoLionDev/opencode-console-notify/internal/config"
 )
 
 // HealthReport describes the install end state at one point in time.
@@ -27,10 +33,10 @@ func (r HealthReport) Healthy() bool { return r.PluginOK && r.AUMIDOK }
 // A missing plugin file or key is reported, never returned as an error;
 // errors are reserved for genuine failures (unreadable directory,
 // registry access failure).
-func CheckHealth(pluginsDir string, reg Registry) (HealthReport, error) {
+func CheckHealth(pluginsDir string, reg aumid.Registry) (HealthReport, error) {
 	report := HealthReport{
 		PluginsDir: pluginsDir,
-		PluginPath: PluginPath(pluginsDir),
+		PluginPath: config.PluginPath(pluginsDir),
 	}
 
 	info, err := os.Stat(report.PluginPath)
@@ -69,7 +75,7 @@ func CheckHealth(pluginsDir string, reg Registry) (HealthReport, error) {
 
 // Doctor prints the health report and returns exit code 0 when healthy,
 // 1 when something is missing.
-func Doctor(pluginsDir string, reg Registry, out io.Writer) int {
+func Doctor(pluginsDir string, reg aumid.Registry, out io.Writer) int {
 	report, err := CheckHealth(pluginsDir, reg)
 	if err != nil {
 		fmt.Fprintf(out, "Doctor failed: %s\n", err)

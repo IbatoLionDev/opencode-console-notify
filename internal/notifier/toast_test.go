@@ -1,13 +1,15 @@
-package cli
+package notifier
 
 import (
 	"strings"
 	"testing"
+
+	"github.com/IbatoLionDev/opencode-console-notify/internal/aumid"
 )
 
 func TestBuildToastScriptUsesSharedIdentity(t *testing.T) {
 	script := buildToastScript("OpenCode", "hello")
-	for _, want := range []string{AUMID, "OpenCode", "hello", "ToastNotificationManager"} {
+	for _, want := range []string{aumid.AUMID, "OpenCode", "hello", "ToastNotificationManager"} {
 		if !strings.Contains(script, want) {
 			t.Fatalf("toast script missing %q:\n%s", want, script)
 		}

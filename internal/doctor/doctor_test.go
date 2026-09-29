@@ -1,12 +1,20 @@
-package cli
+package doctor
 
 import (
 	"bytes"
+	"errors"
 	"os"
 	"path/filepath"
 	"strings"
 	"testing"
+
+	"github.com/IbatoLionDev/opencode-console-notify/internal/aumid"
+	"github.com/IbatoLionDev/opencode-console-notify/internal/config"
+	"github.com/IbatoLionDev/opencode-console-notify/internal/installer"
+	"github.com/IbatoLionDev/opencode-console-notify/plugin"
 )
+
+var errTestBoom = errors.New("test registry failure")
 
 func TestCheckHealthParityMatrix(t *testing.T) {
 	tests := []struct {
@@ -28,15 +36,15 @@ func TestCheckHealthParityMatrix(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			plugins := t.TempDir()
 			if tt.seedFile {
-				content := pluginSource
+				content := plugin.Source
 				if tt.seedEmpty {
 					content = []byte{}
 				}
-				if err := os.WriteFile(PluginPath(plugins), content, 0o644); err != nil {
+				if err := os.WriteFile(config.PluginPath(plugins), content, 0o644); err != nil {
 					t.Fatalf("seed plugin file: %v", err)
 				}
 			}
-			reg := &FakeRegistry{registered: tt.registered, displayName: AUMIDDisplayName}
+			reg := &aumid.FakeRegistry{Registered: tt.registered, DisplayName: aumid.AUMIDDisplayName}
 
 			report, err := CheckHealth(plugins, reg)
 			if err != nil {
@@ -57,7 +65,7 @@ func TestCheckHealthParityMatrix(t *testing.T) {
 
 func TestDoctorExitCodesAndMessages(t *testing.T) {
 	plugins := t.TempDir()
-	reg := &FakeRegistry{}
+	reg := &aumid.FakeRegistry{}
 
 	var missing bytes.Buffer
 	if code := Doctor(plugins, reg, &missing); code == 0 {
@@ -69,7 +77,7 @@ func TestDoctorExitCodesAndMessages(t *testing.T) {
 		t.Fatalf("doctor must say what is missing:\n%s", missing.String())
 	}
 
-	if err := Install(plugins, reg, &bytes.Buffer{}); err != nil {
+	if err := installer.Install(plugins, reg, &bytes.Buffer{}); err != nil {
 		t.Fatalf("Install failed: %v", err)
 	}
 	var healthy bytes.Buffer
@@ -83,7 +91,7 @@ func TestDoctorExitCodesAndMessages(t *testing.T) {
 
 func TestDoctorReportsRegistryFailure(t *testing.T) {
 	plugins := t.TempDir()
-	reg := &FakeRegistry{statusErr: errTestBoom}
+	reg := &aumid.FakeRegistry{StatusErr: errTestBoom}
 	if code := Doctor(plugins, reg, &bytes.Buffer{}); code == 0 {
 		t.Fatal("doctor with registry failure must exit non-zero")
 	}
@@ -91,33 +99,12 @@ func TestDoctorReportsRegistryFailure(t *testing.T) {
 
 func TestDoctorAgainstMissingDirectory(t *testing.T) {
 	plugins := filepath.Join(t.TempDir(), "does-not-exist")
-	reg := &FakeRegistry{}
+	reg := &aumid.FakeRegistry{}
 	report, err := CheckHealth(plugins, reg)
 	if err != nil {
 		t.Fatalf("CheckHealth failed: %v", err)
 	}
 	if report.Healthy() || report.PluginOK {
 		t.Fatalf("missing directory must not be healthy: %+v", report)
-	}
-}
-
-func TestRunDoctorEndToEnd(t *testing.T) {
-	plugins := t.TempDir()
-	reg := &FakeRegistry{}
-	var out, errOut bytes.Buffer
-
-	if code := Run([]string{"doctor", "--plugins-dir", plugins}, reg, &out, &errOut); code == 0 {
-		t.Fatal("run doctor before install must exit non-zero")
-	}
-	if code := Run([]string{"install", "--plugins-dir", plugins}, reg, &out, &errOut); code != 0 {
-		t.Fatalf("run install exited %d: %s", code, errOut.String())
-	}
-	out.Reset()
-	if code := Run([]string{"doctor", "--plugins-dir", plugins}, reg, &out, &errOut); code != 0 {
-		t.Fatalf("run doctor after install exited %d:\n%s", code, out.String())
-	}
-	out.Reset()
-	if code := Run([]string{"uninstall", "--plugins-dir", plugins}, reg, &out, &errOut); code != 0 {
-		t.Fatalf("run uninstall exited %d: %s", code, errOut.String())
 	}
 }

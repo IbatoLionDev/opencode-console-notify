@@ -1,8 +1,10 @@
-package cli
+// Package config resolves where the plugin file lives.
+package config
 
 // paths.go resolves where the plugin file lives.
 
 import (
+	"errors"
 	"os"
 	"path/filepath"
 	"strings"
@@ -10,6 +12,8 @@ import (
 
 // PluginFileName is the only file this CLI ever writes or removes.
 const PluginFileName = "console-notify.js"
+
+var errHomeNotFound = errors.New("could not determine the home directory")
 
 // DefaultPluginsDir returns OpenCode's Windows plugin directory:
 // <HOME>/.config/opencode/plugins. It mirrors install.ps1's default.

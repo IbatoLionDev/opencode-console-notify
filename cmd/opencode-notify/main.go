@@ -5,9 +5,10 @@ package main
 import (
 	"os"
 
+	"github.com/IbatoLionDev/opencode-console-notify/internal/aumid"
 	"github.com/IbatoLionDev/opencode-console-notify/internal/cli"
 )
 
 func main() {
-	os.Exit(cli.Run(os.Args[1:], cli.NewRegistry(), os.Stdout, os.Stderr))
+	os.Exit(cli.Run(os.Args[1:], aumid.NewRegistry(), os.Stdout, os.Stderr))
 }

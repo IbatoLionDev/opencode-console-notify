@@ -1,4 +1,5 @@
-package cli
+// Package installer implements the install and uninstall commands.
+package installer
 
 // install.go implements the install and uninstall commands.
 
@@ -8,6 +9,10 @@ import (
 	"io"
 	"os"
 	"path/filepath"
+
+	"github.com/IbatoLionDev/opencode-console-notify/internal/aumid"
+	"github.com/IbatoLionDev/opencode-console-notify/internal/config"
+	"github.com/IbatoLionDev/opencode-console-notify/plugin"
 )
 
 // writeFileAtomic writes data to dest via a temp file in the same
@@ -15,7 +20,7 @@ import (
 // a half-written plugin file. Any leftover temp file is cleaned up.
 func writeFileAtomic(dest string, data []byte, perm os.FileMode) error {
 	dir := filepath.Dir(dest)
-	tmp, err := os.CreateTemp(dir, PluginFileName+".*.tmp")
+	tmp, err := os.CreateTemp(dir, config.PluginFileName+".*.tmp")
 	if err != nil {
 		return fmt.Errorf("create temp file: %w", err)
 	}
@@ -43,13 +48,13 @@ func writeFileAtomic(dest string, data []byte, perm os.FileMode) error {
 
 // Install copies the embedded plugin into pluginsDir (creating it when
 // needed) and idempotently registers the AUMID key.
-func Install(pluginsDir string, reg Registry, out io.Writer) error {
+func Install(pluginsDir string, reg aumid.Registry, out io.Writer) error {
 	if err := os.MkdirAll(pluginsDir, 0o755); err != nil {
 		return fmt.Errorf("create plugins directory: %w", err)
 	}
 
-	dest := PluginPath(pluginsDir)
-	if err := writeFileAtomic(dest, pluginSource, 0o644); err != nil {
+	dest := config.PluginPath(pluginsDir)
+	if err := writeFileAtomic(dest, plugin.Source, 0o644); err != nil {
 		return err
 	}
 
@@ -57,19 +62,19 @@ func Install(pluginsDir string, reg Registry, out io.Writer) error {
 		return err
 	}
 
-	sum := sha256.Sum256(pluginSource)
+	sum := sha256.Sum256(plugin.Source)
 	fmt.Fprintf(out, "Installed: %s\n", dest)
 	fmt.Fprintf(out, "SHA256:    %x\n", sum)
-	fmt.Fprintf(out, "Source:    embedded plugin/%s (no download)\n", PluginFileName)
-	fmt.Fprintf(out, "AUMID:     registered (HKCU:\\Software\\Classes\\AppUserModelId\\%s, DisplayName=%s)\n", AUMID, AUMIDDisplayName)
+	fmt.Fprintf(out, "Source:    embedded plugin/%s (no download)\n", config.PluginFileName)
+	fmt.Fprintf(out, "AUMID:     registered (HKCU:\\Software\\Classes\\AppUserModelId\\%s, DisplayName=%s)\n", aumid.AUMID, aumid.AUMIDDisplayName)
 	fmt.Fprintf(out, "Restart OpenCode to load the plugin.\n")
 	return nil
 }
 
 // Uninstall removes only the plugin file and exactly the AUMID key,
 // never parent keys or anything else in the plugins directory.
-func Uninstall(pluginsDir string, reg Registry, out io.Writer) error {
-	dest := PluginPath(pluginsDir)
+func Uninstall(pluginsDir string, reg aumid.Registry, out io.Writer) error {
+	dest := config.PluginPath(pluginsDir)
 	if _, err := os.Stat(dest); err == nil {
 		if err := os.Remove(dest); err != nil {
 			return fmt.Errorf("remove plugin file: %w", err)
@@ -86,9 +91,9 @@ func Uninstall(pluginsDir string, reg Registry, out io.Writer) error {
 		return err
 	}
 	if removed {
-		fmt.Fprintf(out, "Removed AUMID registry key: HKCU:\\Software\\Classes\\AppUserModelId\\%s\n", AUMID)
+		fmt.Fprintf(out, "Removed AUMID registry key: HKCU:\\Software\\Classes\\AppUserModelId\\%s\n", aumid.AUMID)
 	} else {
-		fmt.Fprintf(out, "AUMID registry key not present, nothing to remove: HKCU:\\Software\\Classes\\AppUserModelId\\%s\n", AUMID)
+		fmt.Fprintf(out, "AUMID registry key not present, nothing to remove: HKCU:\\Software\\Classes\\AppUserModelId\\%s\n", aumid.AUMID)
 	}
 
 	fmt.Fprintf(out, "Uninstall complete. Restart OpenCode to unload the plugin.\n")

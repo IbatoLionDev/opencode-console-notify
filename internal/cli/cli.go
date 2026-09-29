@@ -6,6 +6,12 @@ import (
 	"fmt"
 	"io"
 	"strings"
+
+	"github.com/IbatoLionDev/opencode-console-notify/internal/aumid"
+	"github.com/IbatoLionDev/opencode-console-notify/internal/config"
+	"github.com/IbatoLionDev/opencode-console-notify/internal/doctor"
+	"github.com/IbatoLionDev/opencode-console-notify/internal/installer"
+	"github.com/IbatoLionDev/opencode-console-notify/internal/notifier"
 )
 
 const usageText = `Usage: opencode-notify [--plugins-dir DIR] <command>
@@ -66,7 +72,7 @@ func parseArgs(args []string) (command string, pluginsDir string, err error) {
 
 // Run executes the CLI; it returns the process exit code so tests can
 // assert on it without spawning a subprocess.
-func Run(args []string, reg Registry, stdout, stderr io.Writer) int {
+func Run(args []string, reg aumid.Registry, stdout, stderr io.Writer) int {
 	command, override, err := parseArgs(args)
 	if err == io.EOF {
 		fmt.Fprint(stdout, usageText)
@@ -81,7 +87,7 @@ func Run(args []string, reg Registry, stdout, stderr io.Writer) int {
 		return 0
 	}
 
-	pluginsDir, err := ResolvePluginsDir(override)
+	pluginsDir, err := config.ResolvePluginsDir(override)
 	if err != nil {
 		fmt.Fprintf(stderr, "Error: %s\n", err)
 		return 2
@@ -89,29 +95,28 @@ func Run(args []string, reg Registry, stdout, stderr io.Writer) int {
 
 	switch command {
 	case "install":
-		if err := Install(pluginsDir, reg, stdout); err != nil {
+		if err := installer.Install(pluginsDir, reg, stdout); err != nil {
 			fmt.Fprintf(stderr, "Error: %s\n", err)
 			return 1
 		}
 		return 0
 	case "uninstall":
-		if err := Uninstall(pluginsDir, reg, stdout); err != nil {
+		if err := installer.Uninstall(pluginsDir, reg, stdout); err != nil {
 			fmt.Fprintf(stderr, "Error: %s\n", err)
 			return 1
 		}
 		return 0
 	case "doctor":
-		return Doctor(pluginsDir, reg, stdout)
+		return doctor.Doctor(pluginsDir, reg, stdout)
 	case "test":
-		if err := SendTestToast(reg); err != nil {
+		if err := notifier.SendTestToast(reg); err != nil {
 			fmt.Fprintf(stderr, "Error: %s\n", err)
 			return 1
 		}
-		fmt.Fprintf(stdout, "Sent test notification via %s.\n", AUMID)
+		fmt.Fprintf(stdout, "Sent test notification via %s.\n", aumid.AUMID)
 		return 0
 	default:
 		fmt.Fprintf(stderr, "Error: unknown command %q\n\n%s", command, usageText)
 		return 2
 	}
 }
-

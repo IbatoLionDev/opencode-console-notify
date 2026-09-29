@@ -1,4 +1,5 @@
-package cli
+// Package notifier sends a real Windows toast for the test command.
+package notifier
 
 // toast.go sends a real Windows toast for the test command.
 // It shells out to PowerShell with a UTF-16LE base64 payload, the same
@@ -10,6 +11,8 @@ import (
 	"os/exec"
 	"strings"
 	"unicode/utf16"
+
+	"github.com/IbatoLionDev/opencode-console-notify/internal/aumid"
 )
 
 // buildToastScript renders the PowerShell snippet that shows one toast
@@ -27,7 +30,7 @@ func buildToastScript(title, line string) string {
 		"$t = [Windows.UI.Notifications.ToastNotification]::new($x)",
 		"$t.Tag = 'opencode-test'",
 		"$t.Group = 'opencode'",
-		fmt.Sprintf(`[Windows.UI.Notifications.ToastNotificationManager]::CreateToastNotifier('%s').Show($t)`, AUMID),
+		fmt.Sprintf(`[Windows.UI.Notifications.ToastNotificationManager]::CreateToastNotifier('%s').Show($t)`, aumid.AUMID),
 	}
 	return strings.Join(lines, "\n")
 }
@@ -57,7 +60,7 @@ func encodePowerShell(script string) string {
 
 // SendTestToast ensures the AUMID registration exists (idempotent) and
 // then shows a real toast so a manual run visibly notifies.
-func SendTestToast(reg Registry) error {
+func SendTestToast(reg aumid.Registry) error {
 	if err := reg.EnsureAUMID(); err != nil {
 		return err
 	}
