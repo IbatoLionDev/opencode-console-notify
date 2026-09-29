@@ -78,8 +78,18 @@ ensureAumidRegistered()
 const lastSent = new Map()
 const childCache = new Map()
 
+// XML 1.0 forbids C0/C1 controls and lone surrogates; one illegal character makes LoadXml throw and the toast is lost.
+function xmlSafe(value) {
+  let out = ""
+  for (const ch of String(value)) {
+    const cp = ch.codePointAt(0)
+    if (cp === 9 || cp === 10 || cp === 13 || (cp >= 32 && cp <= 0x7e) || (cp >= 0xa0 && cp <= 0xd7ff) || (cp >= 0xe000 && cp <= 0xfffd) || (cp >= 0x10000 && cp <= 0x10ffff)) out += ch
+  }
+  return out
+}
+
 function escapeXml(value) {
-  return String(value)
+  return xmlSafe(value)
     .replace(/&/g, "&amp;")
     .replace(/</g, "&lt;")
     .replace(/>/g, "&gt;")
@@ -89,7 +99,10 @@ function escapeXml(value) {
 
 function truncate(value) {
   const text = String(value).replace(/\s+/g, " ").trim()
-  return text.length > MAX_LINE ? `${text.slice(0, MAX_LINE - 3)}...` : text
+  if (text.length <= MAX_LINE) return text
+  let end = MAX_LINE - 3
+  if (end > 0 && text.charCodeAt(end) >= 0xdc00 && text.charCodeAt(end) <= 0xdfff) end -= 1
+  return `${text.slice(0, end)}...`
 }
 
 function sendToast(title, lines, tag) {
