@@ -1,0 +1,69 @@
+# CI for opencode-console-notify: Go build/vet/fmt/tests plus the
+# install.ps1 smoke test, all on windows-latest (PowerShell 5.1).
+name: ci
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  ci:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+
+      - name: Build
+        shell: powershell
+        run: go build ./...
+
+      - name: Vet
+        shell: powershell
+        run: go vet ./...
+
+      - name: Check gofmt
+        shell: powershell
+        run: |
+          $diff = gofmt -l cmd internal plugin
+          if ($diff) {
+            Write-Output 'gofmt found unformatted files:'
+            Write-Output $diff
+            exit 1
+          }
+
+      - name: Test
+        shell: powershell
+        run: go test ./... -count=1
+
+      - name: install.ps1 smoke test
+        shell: powershell
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $pluginsDir = Join-Path $env:TEMP 'ocn-ci\plugins'
+          $dest = Join-Path $pluginsDir 'console-notify.js'
+          $aumidKey = 'HKCU:\Software\Classes\AppUserModelId\OpenCode.Notifier'
+          if (Test-Path -LiteralPath $pluginsDir) {
+            Remove-Item -LiteralPath $pluginsDir -Recurse -Force
+          }
+          .\install.ps1 -PluginsDir $pluginsDir
+          if (-not (Test-Path -LiteralPath $dest -PathType Leaf)) {
+            throw "plugin file missing after install: $dest"
+          }
+          if (-not (Test-Path -LiteralPath $aumidKey)) {
+            throw "AUMID key missing after install: $aumidKey"
+          }
+          go run ./cmd/opencode-notify doctor --plugins-dir $pluginsDir
+          if ($LASTEXITCODE -ne 0) {
+            throw 'doctor reported unhealthy state after install'
+          }
+          .\install.ps1 -PluginsDir $pluginsDir -Uninstall
+          if (Test-Path -LiteralPath $dest) {
+            throw "plugin file still present after uninstall: $dest"
+          }
+          if (Test-Path -LiteralPath $aumidKey) {
+            throw "AUMID key still present after uninstall: $aumidKey"
+          }

@@ -1,0 +1,39 @@
+# --- ODD flow artifacts (feature documents, task lists) ---
+odd/
+
+# --- Engram persistent memory ---
+.engram/
+
+# --- Gentle AI runtime artifacts ---
+.gentle-ai/
+
+# --- OpenCode local runtime artifacts ---
+.opencode/
+
+# --- SDD / OpenSpec file artifacts ---
+openspec/
+
+# --- CodeGraph index (per-worktree, never shared) ---
+.codegraph/
+
+# --- Project skill registry (generated) ---
+.atl/
+
+# --- Node / JS ---
+node_modules/
+dist/
+*.log
+
+# --- Go build / test output ---
+*.exe
+*.test
+coverage.out
+bin/
+
+# --- OS / editor noise ---
+.DS_Store
+Thumbs.db
+desktop.ini
+.idea/
+.vscode/
+*.swp
