@@ -14,11 +14,17 @@
 
     Local checkout (offline / development, supports all parameters):
 
-        .\install.ps1 [-PluginsDir <path>] [-Uninstall]
+        .\install.ps1 [-PluginsDir <path>] [-Uninstall] [-Upgrade]
 
     When the script runs from a checkout that contains plugin\console-notify.js
     the local file is used and nothing is downloaded. Otherwise the plugin
-    source is fetched from the URL above.
+    source is fetched from the URL above. -Upgrade always downloads fresh
+    bytes from the URL above, skipping the local file.
+
+.PARAMETER Upgrade
+    Re-download the plugin source from GitHub instead of using the local
+    checkout file, then install exactly like a fresh install. When combined
+    with -Uninstall, the uninstall runs and -Upgrade is ignored.
 
 .PARAMETER Uninstall
     Remove the installed plugin file and the AUMID registration instead of
@@ -37,10 +43,14 @@
 
 .EXAMPLE
     .\install.ps1 -Uninstall
+
+.EXAMPLE
+    .\install.ps1 -Upgrade
 #>
 [CmdletBinding()]
 param(
     [switch] $Uninstall,
+    [switch] $Upgrade,
     [string] $PluginsDir = (Join-Path $HOME '.config/opencode\plugins')
 )
 
@@ -52,6 +62,7 @@ function Invoke-ConsoleNotifyInstall {
     [CmdletBinding()]
     param(
         [switch] $Uninstall,
+        [switch] $Upgrade,
         [string] $PluginsDir
     )
 
@@ -105,8 +116,9 @@ function Invoke-ConsoleNotifyInstall {
     $bytes = $null
     $sourceDescription = $null
 
-    if (-not [string]::IsNullOrWhiteSpace([string]$scriptRoot)) {
+    if ((-not $Upgrade) -and (-not [string]::IsNullOrWhiteSpace([string]$scriptRoot))) {
         # Local checkout / dev path: uses the file on disk, no network.
+        # -Upgrade skips this branch so the install always uses fresh bytes.
         $localPlugin = Join-Path (Join-Path $scriptRoot 'plugin') $pluginName
         if (Test-Path -LiteralPath $localPlugin -PathType Leaf) {
             $bytes = [IO.File]::ReadAllBytes($localPlugin)
@@ -175,7 +187,7 @@ function Invoke-ConsoleNotifyInstall {
 
 $installError = $null
 try {
-    Invoke-ConsoleNotifyInstall -Uninstall:$Uninstall -PluginsDir $PluginsDir
+    Invoke-ConsoleNotifyInstall -Uninstall:$Uninstall -Upgrade:$Upgrade -PluginsDir $PluginsDir
 } catch {
     $installError = $_
 } finally {

@@ -3,6 +3,25 @@
 All notable changes to this project are documented here, newest first.
 Version headers link to the GitHub release when one exists.
 
+## [1.2.0] - 2026-10-01
+
+Upgrade on all three install paths, zero new dependencies.
+
+### Added
+
+- npm: `opencode-console-notify upgrade` — compares the local version against
+  the npm registry; when a newer release exists it installs
+  `opencode-console-notify@latest` globally and re-runs `install` from the
+  fresh copy (`--plugins-dir DIR` is forwarded). Already up to date prints
+  both versions and changes nothing.
+- PowerShell: `.\install.ps1 -Upgrade` — skips the local-checkout file and
+  always downloads fresh bytes from GitHub, then installs exactly like a
+  fresh install (same atomic write, AUMID registration, and hash output).
+  `-Uninstall` wins when both switches are set.
+- Go: `opencode-notify.exe upgrade` — reinstalls the plugin from the embedded
+  copy and runs `doctor` to verify. The copy is build-pinned, so the output
+  points at the GitHub Releases page for newer binaries.
+
 ## [1.1.0] - 2026-10-01
 
 Third install path: zero-dependency npm/npx CLI — no Go needed, Windows-only.

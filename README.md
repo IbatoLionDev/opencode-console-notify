@@ -59,6 +59,62 @@ npx opencode-console-notify test
 npx opencode-console-notify uninstall
 ```
 
+The published package works with any npm-compatible manager:
+
+```powershell
+pnpm add -g opencode-console-notify
+opencode-console-notify install
+```
+
+```powershell
+yarn global add opencode-console-notify
+opencode-console-notify install
+```
+
+```powershell
+bun add -g opencode-console-notify
+opencode-console-notify install
+```
+
+One-off runs without installing:
+
+```powershell
+pnpm dlx opencode-console-notify install
+bunx opencode-console-notify install
+```
+
+### Upgrade
+
+One command per path:
+
+```powershell
+opencode-console-notify upgrade
+```
+
+Checks the npm registry for a newer release. When the installed copy is
+already up to date it prints both versions and changes nothing; otherwise it
+installs `opencode-console-notify@latest` globally and re-runs `install` from
+the fresh copy. `--plugins-dir DIR` (before or after the command) is
+forwarded to that reinstall.
+
+```powershell
+.\install.ps1 -Upgrade
+```
+
+Skips the local-checkout file and always downloads fresh bytes from GitHub,
+then installs exactly like a fresh install (same atomic write, AUMID
+registration, and hash output). `-Uninstall` wins when both are set.
+
+```powershell
+opencode-notify.exe upgrade
+```
+
+Reinstalls the plugin from the copy embedded in the binary and runs `doctor`
+to verify. The embedded copy is pinned at build time, so this refreshes the
+install but cannot fetch a newer binary — newer `opencode-notify.exe` builds
+come from the
+[GitHub Releases page](https://github.com/IbatoLionDev/opencode-console-notify/releases).
+
 ### Then
 
 Restart OpenCode.
