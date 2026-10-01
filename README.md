@@ -59,6 +59,30 @@ npx opencode-console-notify test
 npx opencode-console-notify uninstall
 ```
 
+The published package works with any npm-compatible manager:
+
+```powershell
+pnpm add -g opencode-console-notify
+opencode-console-notify install
+```
+
+```powershell
+yarn global add opencode-console-notify
+opencode-console-notify install
+```
+
+```powershell
+bun add -g opencode-console-notify
+opencode-console-notify install
+```
+
+One-off runs without installing:
+
+```powershell
+pnpm dlx opencode-console-notify install
+bunx opencode-console-notify install
+```
+
 ### Then
 
 Restart OpenCode.
