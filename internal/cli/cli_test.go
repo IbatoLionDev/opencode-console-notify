@@ -42,6 +42,9 @@ func TestParseArgs(t *testing.T) {
 		wantUsage bool // io.EOF: no command at all
 	}{
 		{name: "bare install", args: []string{"install"}, wantCmd: "install"},
+		{name: "bare upgrade", args: []string{"upgrade"}, wantCmd: "upgrade"},
+		{name: "upgrade flag before command", args: []string{pluginsDirFlag, `C:\p`, "upgrade"}, wantCmd: "upgrade", wantDir: `C:\p`},
+		{name: "upgrade flag after command", args: []string{"upgrade", pluginsDirFlag, `C:\p`}, wantCmd: "upgrade", wantDir: `C:\p`},
 		{name: "flag before command", args: []string{pluginsDirFlag, `C:\p`, "doctor"}, wantCmd: "doctor", wantDir: `C:\p`},
 		{name: "flag after command", args: []string{"doctor", pluginsDirFlag, `C:\p`}, wantCmd: "doctor", wantDir: `C:\p`},
 		{name: "equals form", args: []string{pluginsDirFlag + `=C:\p`, "test"}, wantCmd: "test", wantDir: `C:\p`},

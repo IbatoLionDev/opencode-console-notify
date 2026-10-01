@@ -1,5 +1,5 @@
 // Package cli implements the opencode-notify commands (install, uninstall,
-// doctor, test) shared by the CLI entry point without admin rights.
+// doctor, test, upgrade) shared by the CLI entry point without admin rights.
 package cli
 
 import (
@@ -23,11 +23,20 @@ Commands:
   doctor      Verify the install end state (plugin file + AUMID).
               Exit 0 when healthy, 1 when something is missing.
   test        Send a real Windows toast notification.
+  upgrade     Reinstall the plugin from the embedded copy and verify.
+              Newer binaries come from the GitHub Releases page.
 
 Options:
   --plugins-dir DIR   Override the plugins directory.
                       Default: <HOME>/.config/opencode/plugins
 `
+
+// Version is the CLI version shown by the upgrade command.
+const Version = "1.2.0"
+
+// releasesURL is where newer opencode-notify.exe binaries are published.
+// The embedded plugin copy is build-pinned, so upgrade says so honestly.
+const releasesURL = "https://github.com/IbatoLionDev/opencode-console-notify/releases"
 
 const errorFormat = "Error: %s\n"
 
@@ -73,10 +82,10 @@ func parseArgs(args []string) (command string, pluginsDir string, err error) {
 	switch command {
 	case "":
 		return "", "", io.EOF // signal: print usage
-	case "install", "uninstall", "doctor", "test", "help", "--help", "-h":
+	case "install", "uninstall", "doctor", "test", "upgrade", "help", "--help", "-h":
 		return command, pluginsDir, nil
 	default:
-		return "", "", fmt.Errorf("unknown command %q (want install|uninstall|doctor|test)", command)
+		return "", "", fmt.Errorf("unknown command %q (want install|uninstall|doctor|test|upgrade)", command)
 	}
 }
 
@@ -125,6 +134,16 @@ func Run(args []string, reg aumid.Registry, stdout, stderr io.Writer) int {
 		}
 		fmt.Fprintf(stdout, "Sent test notification via %s.\n", aumid.AUMID)
 		return 0
+	case "upgrade":
+		fmt.Fprintf(stdout, "Upgrading with embedded copy (version %s)...\n", Version)
+		if err := installer.Install(pluginsDir, reg, stdout); err != nil {
+			fmt.Fprintf(stderr, errorFormat, err)
+			return 1
+		}
+		code := doctor.Doctor(pluginsDir, reg, stdout)
+		fmt.Fprintf(stdout, "Upgrade complete: version %s.\n", Version)
+		fmt.Fprintf(stdout, "Note: this binary carries a build-pinned copy; newer binaries come from the GitHub Releases page: %s\n", releasesURL)
+		return code
 	default:
 		fmt.Fprintf(stderr, "Error: unknown command %q\n\n%s", command, usageText)
 		return 2
