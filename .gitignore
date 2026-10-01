@@ -28,7 +28,8 @@ dist/
 *.exe
 *.test
 coverage.out
-bin/
+bin/*
+!bin/opencode-console-notify.js
 
 # --- OS / editor noise ---
 .DS_Store

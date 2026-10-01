@@ -3,6 +3,33 @@
 All notable changes to this project are documented here, newest first.
 Version headers link to the GitHub release when one exists.
 
+## [1.1.0] - 2026-10-01
+
+Third install path: zero-dependency npm/npx CLI — no Go needed, Windows-only.
+
+```powershell
+npm i -g opencode-console-notify
+opencode-console-notify install
+```
+
+Or without installing anything:
+
+```powershell
+npx opencode-console-notify install
+npx opencode-console-notify doctor
+npx opencode-console-notify test
+npx opencode-console-notify uninstall
+```
+
+### Added
+
+- `bin/` + `lib/` mirror folders (`config`, `aumid`, `installer`, `doctor`,
+  `notifier`, `cli`) — same behavior as the Go CLI, zero dependencies.
+- Parity `doctor`: verifies the same end state (plugin file present + AUMID
+  registration) regardless of which install path produced it.
+- `--plugins-dir` override on every npm CLI command
+  (`install` | `uninstall` | `doctor` | `test`).
+
 ## [1.0.0] - 2026-09-29
 
 First public release: native Windows toast notifications for OpenCode.

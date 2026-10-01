@@ -23,7 +23,7 @@ notify, even from children, because they stop all progress until answered.
 
 ## Install
 
-Two independent paths — pick either one. Each path registers the Windows notification
+Three independent paths — pick any one. Each path registers the Windows notification
 identity (AUMID) itself, so there are no manual registry steps.
 
 ### PowerShell (one line)
@@ -41,18 +41,37 @@ irm https://raw.githubusercontent.com/IbatoLionDev/opencode-console-notify/main/
 opencode-notify.exe install
 ```
 
+### npm / npx (no Go needed)
+
+Zero-dependency, Windows-only:
+
+```powershell
+npm i -g opencode-console-notify
+opencode-console-notify install
+```
+
+Or without installing anything:
+
+```powershell
+npx opencode-console-notify install
+npx opencode-console-notify doctor
+npx opencode-console-notify test
+npx opencode-console-notify uninstall
+```
+
 ### Then
 
 Restart OpenCode.
 
-### Options shared by both paths
+### Options shared by all paths
 
-Custom plugins directory (both paths accept it; the CLI flag works with
+Custom plugins directory (every path accepts it; the CLI flags work with
 `install`, `uninstall`, `doctor`, and `test`):
 
 ```powershell
 .\install.ps1 -PluginsDir "C:\path\to\plugins"
 opencode-notify.exe install --plugins-dir "C:\path\to\plugins"
+opencode-console-notify install --plugins-dir "C:\path\to\plugins"
 ```
 
 Run from a local clone, `.\install.ps1` uses the checkout's `plugin\` file and
@@ -70,21 +89,24 @@ go build -o opencode-notify.exe ./cmd/opencode-notify
 
 ```powershell
 opencode-notify.exe doctor
+# or: opencode-console-notify doctor
 ```
 
-(or re-run the PowerShell script — both check the same end state: plugin file present
+(or re-run the PowerShell script — all three check the same end state: plugin file present
 and AUMID registered).
 
 Send a test toast:
 
 ```powershell
 opencode-notify.exe test
+# or: opencode-console-notify test
 ```
 
 ## Uninstall
 
 ```powershell
 opencode-notify.exe uninstall
+# or: opencode-console-notify uninstall
 ```
 
 or re-run the PowerShell script with `-Uninstall`.
