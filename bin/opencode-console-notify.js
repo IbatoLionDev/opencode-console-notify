@@ -1,7 +1,6 @@
 #!/usr/bin/env node
-'use strict';
 
 // Entry point: all logic lives in lib/cli.
-const { run } = require('../lib/cli');
+import { run } from '../lib/cli/index.js';
 
 process.exitCode = run(process.argv.slice(2));
