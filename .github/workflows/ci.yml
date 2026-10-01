@@ -67,3 +67,79 @@ jobs:
           if (Test-Path -LiteralPath $aumidKey) {
             throw "AUMID key still present after uninstall: $aumidKey"
           }
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Node syntax check (bin + lib)
+        shell: powershell
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $files = @(
+            'bin/opencode-console-notify.js',
+            'lib/aumid/index.js',
+            'lib/cli/index.js',
+            'lib/config/index.js',
+            'lib/doctor/index.js',
+            'lib/installer/index.js',
+            'lib/notifier/index.js'
+          )
+          foreach ($f in $files) { node --check $f }
+
+      - name: Line-ending guard (LF only, no CRLF)
+        shell: powershell
+        run: |
+          $ErrorActionPreference = 'Stop'
+          # Regression guard for the v1 gofmt incident (LF blobs + CRLF
+          # worktrees via autocrlf): tracked JS must contain no CR byte.
+          $bad = @()
+          $files = Get-ChildItem -Path bin, lib -Filter *.js -Recurse |
+            Select-Object -ExpandProperty FullName
+          foreach ($f in $files) {
+            $bytes = [IO.File]::ReadAllBytes($f)
+            for ($i = 0; $i -lt $bytes.Length; $i++) {
+              if ($bytes[$i] -eq 13) { $bad += $f; break }
+            }
+          }
+          if ($bad.Count -gt 0) {
+            Write-Output 'CRLF bytes found in:'
+            Write-Output ($bad -join "`n")
+            exit 1
+          }
+
+      - name: npm pack dry run
+        shell: powershell
+        run: npm pack --dry-run
+
+      - name: npm path smoke test
+        shell: powershell
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $pluginsDir = Join-Path $env:TEMP 'ocn-ci-npm\plugins'
+          $dest = Join-Path $pluginsDir 'console-notify.js'
+          $aumidKey = 'HKCU:\Software\Classes\AppUserModelId\OpenCode.Notifier'
+          if (Test-Path -LiteralPath $pluginsDir) {
+            Remove-Item -LiteralPath $pluginsDir -Recurse -Force
+          }
+          node bin/opencode-console-notify.js install --plugins-dir $pluginsDir
+          if ($LASTEXITCODE -ne 0) { throw 'npm install failed' }
+          if (-not (Test-Path -LiteralPath $dest -PathType Leaf)) {
+            throw "plugin file missing after npm install: $dest"
+          }
+          if (-not (Test-Path -LiteralPath $aumidKey)) {
+            throw "AUMID key missing after npm install: $aumidKey"
+          }
+          node bin/opencode-console-notify.js doctor --plugins-dir $pluginsDir
+          if ($LASTEXITCODE -ne 0) {
+            throw 'doctor reported unhealthy state after npm install'
+          }
+          node bin/opencode-console-notify.js uninstall --plugins-dir $pluginsDir
+          if ($LASTEXITCODE -ne 0) { throw 'npm uninstall failed' }
+          if (Test-Path -LiteralPath $dest) {
+            throw "plugin file still present after npm uninstall: $dest"
+          }
+          if (Test-Path -LiteralPath $aumidKey) {
+            throw "AUMID key still present after npm uninstall: $aumidKey"
+          }
