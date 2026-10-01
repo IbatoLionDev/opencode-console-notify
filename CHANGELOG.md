@@ -3,7 +3,7 @@
 All notable changes to this project are documented here, newest first.
 Version headers link to the GitHub release when one exists.
 
-## [1.2.1] - Unreleased
+## [1.2.1] - 2026-10-01
 
 ### Added
 
