@@ -83,6 +83,12 @@ pnpm dlx opencode-console-notify install
 bunx opencode-console-notify install
 ```
 
+Check which version you are running (also as `--version` or `-V`):
+
+```powershell
+opencode-console-notify version
+```
+
 ### Upgrade
 
 One command per path:

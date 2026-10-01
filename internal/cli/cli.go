@@ -25,14 +25,16 @@ Commands:
   test        Send a real Windows toast notification.
   upgrade     Reinstall the plugin from the embedded copy and verify.
               Newer binaries come from the GitHub Releases page.
+  version     Print the embedded binary version.
 
 Options:
   --plugins-dir DIR   Override the plugins directory.
                       Default: <HOME>/.config/opencode/plugins
+  --version, -V       Print the version and exit (same as version).
 `
 
-// Version is the CLI version shown by the upgrade command.
-const Version = "1.2.0"
+// Version is the CLI version shown by the version command and upgrade.
+const Version = "1.2.1"
 
 // releasesURL is where newer opencode-notify.exe binaries are published.
 // The embedded plugin copy is build-pinned, so upgrade says so honestly.
@@ -52,40 +54,76 @@ func splitPluginsDirFlag(arg string) (string, bool) {
 	return "", false
 }
 
+// commandAliases maps flag-style spellings to their command so every
+// spelling behaves identically.
+var commandAliases = map[string]string{
+	"--help":    "help",
+	"-h":        "help",
+	"--version": "version",
+	"-V":        "version",
+}
+
+// parser holds CLI parse state across arguments so the loop body stays flat.
+type parser struct {
+	command    string
+	pluginsDir string
+}
+
+// takeValue consumes the value following a --plugins-dir flag.
+func (p *parser) takeValue(args []string, i int) (int, error) {
+	if i+1 >= len(args) {
+		return 0, fmt.Errorf("flag %s needs a value", args[i])
+	}
+	p.pluginsDir = args[i+1]
+	return 2, nil
+}
+
+// step processes one argument and returns how many args were consumed.
+func (p *parser) step(args []string, i int) (int, error) {
+	arg := args[i]
+	if arg == "--plugins-dir" || arg == "-plugins-dir" {
+		return p.takeValue(args, i)
+	}
+	if v, ok := splitPluginsDirFlag(arg); ok {
+		p.pluginsDir = v
+		return 1, nil
+	}
+	if alias, ok := commandAliases[arg]; ok {
+		if p.command != "" {
+			return 0, fmt.Errorf("unexpected argument %s", arg)
+		}
+		p.command = alias
+		return 1, nil
+	}
+	if strings.HasPrefix(arg, "-") {
+		return 0, fmt.Errorf("unknown flag %s", arg)
+	}
+	if p.command == "" {
+		p.command = arg
+		return 1, nil
+	}
+	return 0, fmt.Errorf("unexpected argument %s", arg)
+}
+
 // parseArgs extracts the subcommand and the --plugins-dir override.
 // The flag is accepted before or after the command, as
 // "--plugins-dir DIR" or "--plugins-dir=DIR" (single-dash form too).
 func parseArgs(args []string) (command string, pluginsDir string, err error) {
-	for i := 0; i < len(args); i++ {
-		arg := args[i]
-		if arg == "--plugins-dir" || arg == "-plugins-dir" {
-			if i+1 >= len(args) {
-				return "", "", fmt.Errorf("flag %s needs a value", arg)
-			}
-			i++
-			pluginsDir = args[i]
-			continue
+	p := &parser{}
+	for i := 0; i < len(args); {
+		n, stepErr := p.step(args, i)
+		if stepErr != nil {
+			return "", "", stepErr
 		}
-		if v, ok := splitPluginsDirFlag(arg); ok {
-			pluginsDir = v
-			continue
-		}
-		if strings.HasPrefix(arg, "-") {
-			return "", "", fmt.Errorf("unknown flag %s", arg)
-		}
-		if command == "" {
-			command = arg
-			continue
-		}
-		return "", "", fmt.Errorf("unexpected argument %s", arg)
+		i += n
 	}
-	switch command {
+	switch p.command {
 	case "":
 		return "", "", io.EOF // signal: print usage
-	case "install", "uninstall", "doctor", "test", "upgrade", "help", "--help", "-h":
-		return command, pluginsDir, nil
+	case "install", "uninstall", "doctor", "test", "upgrade", "version", "help":
+		return p.command, p.pluginsDir, nil
 	default:
-		return "", "", fmt.Errorf("unknown command %q (want install|uninstall|doctor|test|upgrade)", command)
+		return "", "", fmt.Errorf("unknown command %q (want install|uninstall|doctor|test|upgrade|version)", p.command)
 	}
 }
 
@@ -101,7 +139,7 @@ func Run(args []string, reg aumid.Registry, stdout, stderr io.Writer) int {
 		fmt.Fprintf(stderr, "Error: %s\n\n%s", err, usageText)
 		return 2
 	}
-	if command == "help" || command == "--help" || command == "-h" {
+	if command == "help" {
 		fmt.Fprint(stdout, usageText)
 		return 0
 	}
@@ -144,6 +182,9 @@ func Run(args []string, reg aumid.Registry, stdout, stderr io.Writer) int {
 		fmt.Fprintf(stdout, "Upgrade complete: version %s.\n", Version)
 		fmt.Fprintf(stdout, "Note: this binary carries a build-pinned copy; newer binaries come from the GitHub Releases page: %s\n", releasesURL)
 		return code
+	case "version":
+		fmt.Fprintf(stdout, "opencode-notify %s\n", Version)
+		return 0
 	default:
 		fmt.Fprintf(stderr, "Error: unknown command %q\n\n%s", command, usageText)
 		return 2

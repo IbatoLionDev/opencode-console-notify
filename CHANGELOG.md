@@ -3,6 +3,13 @@
 All notable changes to this project are documented here, newest first.
 Version headers link to the GitHub release when one exists.
 
+## [1.2.1] - 2026-10-01
+
+### Added
+
+- npm: `opencode-console-notify version` (also `--version` / `-V`) prints the
+  installed package version, so a stale global install is diagnosable.
+
 ## [1.2.0] - 2026-10-01
 
 Upgrade on all three install paths, zero new dependencies.

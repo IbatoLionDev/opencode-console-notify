@@ -54,6 +54,12 @@ func TestParseArgs(t *testing.T) {
 		{name: "extra positional", args: []string{"install", "extra"}, wantErr: true},
 		{name: "no args prints usage", args: nil, wantUsage: true},
 		{name: "help", args: []string{"help"}, wantCmd: "help"},
+		{name: "help long flag", args: []string{"--help"}, wantCmd: "help"},
+		{name: "help short flag", args: []string{"-h"}, wantCmd: "help"},
+		{name: "version", args: []string{"version"}, wantCmd: "version"},
+		{name: "version long flag", args: []string{"--version"}, wantCmd: "version"},
+		{name: "version short flag", args: []string{"-V"}, wantCmd: "version"},
+		{name: "flag after command", args: []string{"install", "--version"}, wantErr: true},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
