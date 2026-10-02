@@ -3,6 +3,20 @@
 All notable changes to this project are documented here, newest first.
 Version headers link to the GitHub release when one exists.
 
+## [2.0.0] - 2026-10-02
+
+### Added
+
+- `config` command (Go and npm, English/Spanish): interactive TUI with
+  language (applies to the TUI and default notification texts), update
+  (reuses the existing `upgrade` flow per distribution), info (commands
+  plus npm/repo/Releases links), and alerts (the four default events with
+  their triggers, toggleable with Space). Every view prints its keys in a
+  visible footer. Script flags: `--lang en|es`, `--toggle KEY=on|off`,
+  `--list-alerts`, `--info`. Settings persist in
+  `console-notify.config.json` next to the plugin file; missing file keeps
+  v1 behavior (all alerts on, English). Zero new dependencies.
+
 ## [1.3.1] - 2026-10-02
 
 Internal restructuring under clean-architecture layering; no behavior,

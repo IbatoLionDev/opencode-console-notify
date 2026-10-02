@@ -1,5 +1,5 @@
 // Package cli implements the opencode-notify commands (install, uninstall,
-// doctor, test, upgrade) shared by the CLI entry point without admin rights.
+// doctor, test, upgrade, config) shared by the CLI entry point without admin rights.
 package cli
 
 import (
@@ -25,6 +25,9 @@ Commands:
   test        Send a real Windows toast notification.
   upgrade     Reinstall the plugin from the embedded copy and verify.
               Newer binaries come from the GitHub Releases page.
+  config      Open the config TUI (language, update, info, alerts).
+              Flags for scripts: --lang en|es, --toggle KEY=on|off,
+              --list-alerts, --info.
   version     Print the embedded binary version.
 
 Options:
@@ -42,7 +45,7 @@ const errorFormat = "Error: %s\n"
 // Run executes the CLI; it returns the process exit code so tests can
 // assert on it without spawning a subprocess.
 func Run(args []string, reg aumid.Registry, stdout, stderr io.Writer) int {
-	command, override, err := parseArgs(args)
+	command, override, configArgs, err := parseArgsFull(args)
 	if err == io.EOF {
 		fmt.Fprint(stdout, usageText)
 		return 2
@@ -97,6 +100,8 @@ func Run(args []string, reg aumid.Registry, stdout, stderr io.Writer) int {
 	case "version":
 		fmt.Fprintf(stdout, "opencode-notify %s\n", version.Version)
 		return 0
+	case "config":
+		return runConfig(pluginsDir, configArgs, reg, stdout)
 	default:
 		fmt.Fprintf(stderr, "Error: unknown command %q\n\n%s", command, usageText)
 		return 2
