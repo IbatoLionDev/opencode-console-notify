@@ -157,6 +157,9 @@ opencode-notify.exe doctor
 (or re-run the PowerShell script — all three check the same end state: plugin file present
 and AUMID registered).
 
+`doctor` also prints an automatic update notice when a newer release exists
+(the check is best-effort: offline machines just skip it).
+
 Send a test toast:
 
 ```powershell

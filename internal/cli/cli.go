@@ -12,6 +12,7 @@ import (
 	"github.com/IbatoLionDev/opencode-console-notify/internal/doctor"
 	"github.com/IbatoLionDev/opencode-console-notify/internal/installer"
 	"github.com/IbatoLionDev/opencode-console-notify/internal/notifier"
+	"github.com/IbatoLionDev/opencode-console-notify/internal/version"
 )
 
 const usageText = `Usage: opencode-notify [--plugins-dir DIR] <command>
@@ -32,9 +33,6 @@ Options:
                       Default: <HOME>/.config/opencode/plugins
   --version, -V       Print the version and exit (same as version).
 `
-
-// Version is the CLI version shown by the version command and upgrade.
-const Version = "1.2.1"
 
 // releasesURL is where newer opencode-notify.exe binaries are published.
 // The embedded plugin copy is build-pinned, so upgrade says so honestly.
@@ -173,17 +171,17 @@ func Run(args []string, reg aumid.Registry, stdout, stderr io.Writer) int {
 		fmt.Fprintf(stdout, "Sent test notification via %s.\n", aumid.AUMID)
 		return 0
 	case "upgrade":
-		fmt.Fprintf(stdout, "Upgrading with embedded copy (version %s)...\n", Version)
+		fmt.Fprintf(stdout, "Upgrading with embedded copy (version %s)...\n", version.Version)
 		if err := installer.Install(pluginsDir, reg, stdout); err != nil {
 			fmt.Fprintf(stderr, errorFormat, err)
 			return 1
 		}
 		code := doctor.Doctor(pluginsDir, reg, stdout)
-		fmt.Fprintf(stdout, "Upgrade complete: version %s.\n", Version)
+		fmt.Fprintf(stdout, "Upgrade complete: version %s.\n", version.Version)
 		fmt.Fprintf(stdout, "Note: this binary carries a build-pinned copy; newer binaries come from the GitHub Releases page: %s\n", releasesURL)
 		return code
 	case "version":
-		fmt.Fprintf(stdout, "opencode-notify %s\n", Version)
+		fmt.Fprintf(stdout, "opencode-notify %s\n", version.Version)
 		return 0
 	default:
 		fmt.Fprintf(stderr, "Error: unknown command %q\n\n%s", command, usageText)
