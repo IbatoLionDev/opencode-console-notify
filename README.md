@@ -121,6 +121,29 @@ install but cannot fetch a newer binary — newer `opencode-notify.exe` builds
 come from the
 [GitHub Releases page](https://github.com/IbatoLionDev/opencode-console-notify/releases).
 
+### Config
+
+```powershell
+opencode-notify.exe config
+# or: opencode-console-notify config
+```
+
+Opens an interactive TUI (English/Spanish) with language, update, info, and
+alerts. Language applies to the TUI and the default notification texts.
+Alerts lists the four default events with their triggers; Space toggles each
+one and the plugin honors it on the next event. Every view prints its keys
+in a visible footer. For scripts:
+
+```powershell
+opencode-console-notify config --lang es
+opencode-console-notify config --toggle sessionIdle=off
+opencode-console-notify config --list-alerts
+opencode-console-notify config --info
+```
+
+Settings persist in `console-notify.config.json` next to the plugin file;
+without it everything stays as in v1 (all alerts on, English).
+
 ### Then
 
 Restart OpenCode.
