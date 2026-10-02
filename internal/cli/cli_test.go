@@ -9,6 +9,9 @@ import (
 
 const pluginsDirFlag = "--plugins-dir"
 
+// configLangFlag is the language flag spelled the config tests use.
+const configLangFlag = "--lang"
+
 func checkParseArgsCase(t *testing.T, args []string, wantCmd, wantDir string, wantErr, wantUsage bool) {
 	t.Helper()
 	cmd, dir, err := parseArgs(args)
@@ -90,11 +93,11 @@ func TestRunDoctorEndToEnd(t *testing.T) {
 }
 
 func TestParseConfigArgs(t *testing.T) {
-	cmd, _, rest, err := parseArgsFull([]string{"config", "--lang", "es"})
+	cmd, _, rest, err := parseArgsFull([]string{"config", configLangFlag, "es"})
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
-	if cmd != "config" || len(rest) != 2 || rest[0] != "--lang" || rest[1] != "es" {
+	if cmd != "config" || len(rest) != 2 || rest[0] != configLangFlag || rest[1] != "es" {
 		t.Fatalf("got (%q, %q)", cmd, rest)
 	}
 	if _, _, _, err := parseArgsFull([]string{"install", "extra"}); err == nil {
@@ -107,7 +110,7 @@ func TestRunConfigFlags(t *testing.T) {
 	reg := &aumid.FakeRegistry{}
 	var out, errOut bytes.Buffer
 
-	if code := Run([]string{"config", pluginsDirFlag, plugins, "--lang", "es"}, reg, &out, &errOut); code != 0 {
+	if code := Run([]string{"config", pluginsDirFlag, plugins, configLangFlag, "es"}, reg, &out, &errOut); code != 0 {
 		t.Fatalf("config --lang exited %d: %s", code, errOut.String())
 	}
 	out.Reset()

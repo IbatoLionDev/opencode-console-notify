@@ -21,7 +21,7 @@ func upgradeFromEmbedded(pluginsDir string, reg aumid.Registry, stdout io.Writer
 	return func(out io.Writer) int {
 		fmt.Fprintf(out, "Upgrading with embedded copy (version %s)...\n", version.Version)
 		if err := installer.Install(pluginsDir, reg, out); err != nil {
-			fmt.Fprintf(out, "Error: %s\n", err)
+			fmt.Fprintf(out, errorFormat, err)
 			return 1
 		}
 		code := doctor.Doctor(pluginsDir, reg, out)
@@ -35,7 +35,7 @@ func upgradeFromEmbedded(pluginsDir string, reg aumid.Registry, stdout io.Writer
 func printAlerts(pluginsDir string, stdout io.Writer) int {
 	s, err := config.Load(pluginsDir)
 	if err != nil {
-		fmt.Fprintf(stdout, "Error: %s\n", err)
+		fmt.Fprintf(stdout, errorFormat, err)
 		return 1
 	}
 	lang := i18n.Normalize(s.Lang)
@@ -57,7 +57,7 @@ func applyToggle(pluginsDir, spec string, stdout io.Writer) int {
 	}
 	s, err := config.Load(pluginsDir)
 	if err != nil {
-		fmt.Fprintf(stdout, "Error: %s\n", err)
+		fmt.Fprintf(stdout, errorFormat, err)
 		return 1
 	}
 	switch strings.ToLower(strings.TrimSpace(key)) {
@@ -74,7 +74,7 @@ func applyToggle(pluginsDir, spec string, stdout io.Writer) int {
 		return 2
 	}
 	if err := config.Save(pluginsDir, s); err != nil {
-		fmt.Fprintf(stdout, "Error: %s\n", err)
+		fmt.Fprintf(stdout, errorFormat, err)
 		return 1
 	}
 	return printAlerts(pluginsDir, stdout)
@@ -88,54 +88,82 @@ func applyLang(pluginsDir, lang string, stdout io.Writer) int {
 	}
 	s, err := config.Load(pluginsDir)
 	if err != nil {
-		fmt.Fprintf(stdout, "Error: %s\n", err)
+		fmt.Fprintf(stdout, errorFormat, err)
 		return 1
 	}
 	s.Lang = lang
 	if err := config.Save(pluginsDir, s); err != nil {
-		fmt.Fprintf(stdout, "Error: %s\n", err)
+		fmt.Fprintf(stdout, errorFormat, err)
 		return 1
 	}
 	fmt.Fprintf(stdout, "Language: %s\n", lang)
 	return 0
 }
 
+func printConfigInfo(pluginsDir string, stdout io.Writer) int {
+	s, err := config.Load(pluginsDir)
+	if err != nil {
+		fmt.Fprintf(stdout, errorFormat, err)
+		return 1
+	}
+	fmt.Fprint(stdout, tui.RenderInfo(i18n.Normalize(s.Lang)))
+	return 0
+}
+
+func takeConfigValue(configArgs []string, i int, stdout io.Writer) (string, bool) {
+	if i+1 >= len(configArgs) {
+		fmt.Fprintf(stdout, "Error: flag %s needs a value\n", configArgs[i])
+		return "", false
+	}
+	return configArgs[i+1], true
+}
+
+// dispatchValueFlag handles --lang/--toggle in both `--flag value` and
+// `--flag=value` forms. The second return reports whether arg was a value
+// flag at all.
+func dispatchValueFlag(pluginsDir string, configArgs []string, stdout io.Writer) (int, bool) {
+	arg := configArgs[0]
+	switch {
+	case arg == "--lang" || arg == "-lang":
+		value, ok := takeConfigValue(configArgs, 0, stdout)
+		if !ok {
+			return 2, true
+		}
+		return applyLang(pluginsDir, value, stdout), true
+	case strings.HasPrefix(arg, "--lang="):
+		return applyLang(pluginsDir, strings.TrimPrefix(arg, "--lang="), stdout), true
+	case arg == "--toggle" || arg == "-toggle":
+		value, ok := takeConfigValue(configArgs, 0, stdout)
+		if !ok {
+			return 2, true
+		}
+		return applyToggle(pluginsDir, value, stdout), true
+	case strings.HasPrefix(arg, "--toggle="):
+		return applyToggle(pluginsDir, strings.TrimPrefix(arg, "--toggle="), stdout), true
+	}
+	return 0, false
+}
+
+func dispatchConfigFlag(pluginsDir string, configArgs []string, stdout io.Writer) int {
+	arg := configArgs[0]
+	switch {
+	case arg == "--list-alerts" || arg == "-list-alerts":
+		return printAlerts(pluginsDir, stdout)
+	case arg == "--info" || arg == "-info":
+		return printConfigInfo(pluginsDir, stdout)
+	}
+	if code, handled := dispatchValueFlag(pluginsDir, configArgs, stdout); handled {
+		return code
+	}
+	fmt.Fprintf(stdout, "Error: unknown config flag %q (want --lang|--toggle|--list-alerts|--info)\n", arg)
+	return 2
+}
+
 // runConfig executes the config command. With no args it opens the TUI;
 // flags keep scripts non-interactive.
 func runConfig(pluginsDir string, configArgs []string, reg aumid.Registry, stdout io.Writer) int {
-	for i := 0; i < len(configArgs); i++ {
-		arg := configArgs[i]
-		switch {
-		case arg == "--list-alerts" || arg == "-list-alerts":
-			return printAlerts(pluginsDir, stdout)
-		case arg == "--info" || arg == "-info":
-			s, err := config.Load(pluginsDir)
-			if err != nil {
-				fmt.Fprintf(stdout, "Error: %s\n", err)
-				return 1
-			}
-			fmt.Fprint(stdout, tui.RenderInfo(i18n.Normalize(s.Lang)))
-			return 0
-		case arg == "--lang" || arg == "-lang":
-			if i+1 >= len(configArgs) {
-				fmt.Fprintf(stdout, "Error: flag %s needs a value\n", arg)
-				return 2
-			}
-			return applyLang(pluginsDir, configArgs[i+1], stdout)
-		case strings.HasPrefix(arg, "--lang="):
-			return applyLang(pluginsDir, strings.TrimPrefix(arg, "--lang="), stdout)
-		case arg == "--toggle" || arg == "-toggle":
-			if i+1 >= len(configArgs) {
-				fmt.Fprintf(stdout, "Error: flag %s needs a value\n", arg)
-				return 2
-			}
-			return applyToggle(pluginsDir, configArgs[i+1], stdout)
-		case strings.HasPrefix(arg, "--toggle="):
-			return applyToggle(pluginsDir, strings.TrimPrefix(arg, "--toggle="), stdout)
-		default:
-			fmt.Fprintf(stdout, "Error: unknown config flag %q (want --lang|--toggle|--list-alerts|--info)\n", arg)
-			return 2
-		}
+	if len(configArgs) == 0 {
+		return tui.Run(pluginsDir, os.Stdin, stdout, upgradeFromEmbedded(pluginsDir, reg, stdout))
 	}
-	return tui.Run(pluginsDir, os.Stdin, stdout, upgradeFromEmbedded(pluginsDir, reg, stdout))
+	return dispatchConfigFlag(pluginsDir, configArgs, stdout)
 }

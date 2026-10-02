@@ -109,81 +109,132 @@ func readKey(r *bufio.Reader) string {
 	return strings.ToLower(strings.TrimSpace(line))
 }
 
+const errorFormat = "Error: %s\n"
+
+// session holds the interactive TUI state so each view method stays small.
+type session struct {
+	pluginsDir string
+	settings   config.Settings
+	lang       string
+	reader     *bufio.Reader
+	stdout     io.Writer
+}
+
+func isBackKey(key string) bool {
+	return key == "q" || key == "esc" || key == "b" || key == "back" || key == "volver"
+}
+
+func menuTransition(key string) string {
+	switch key {
+	case "1", "l", "language", "idioma":
+		return "language"
+	case "2", "u", "update", "actualizar":
+		return "update"
+	case "3", "i", "info":
+		return "info"
+	case "4", "a", "alerts", "alertas":
+		return "alerts"
+	case "5", "q", "quit", "exit", "salir", "esc":
+		return "exit"
+	}
+	return "menu"
+}
+
+// runMenu prints the menu and returns the next view ("exit" quits).
+func (t *session) runMenu() string {
+	fmt.Fprint(t.stdout, RenderMenu(t.lang))
+	return menuTransition(readKey(t.reader))
+}
+
+func (t *session) persist() bool {
+	if err := config.Save(t.pluginsDir, t.settings); err != nil {
+		fmt.Fprintf(t.stdout, errorFormat, err)
+		return false
+	}
+	return true
+}
+
+func (t *session) runLanguage() string {
+	fmt.Fprint(t.stdout, RenderLanguage(t.lang))
+	switch key := readKey(t.reader); key {
+	case "1", "en":
+		t.lang = "en"
+	case "2", "es":
+		t.lang = "es"
+	default:
+		if isBackKey(key) {
+			return "menu"
+		}
+		return "language"
+	}
+	t.settings.Lang = t.lang
+	if !t.persist() {
+		return "abort"
+	}
+	return "language"
+}
+
+func (t *session) runAlerts() string {
+	fmt.Fprint(t.stdout, RenderAlerts(&t.settings, t.lang))
+	key := readKey(t.reader)
+	if isBackKey(key) {
+		return "menu"
+	}
+	// Space-prefixed numbers (" 1") also toggle: TrimSpace already
+	// removed the space, so the digit alone is enough.
+	for _, a := range AlertItems(&t.settings, t.lang) {
+		if key == a.Key {
+			*a.SettingPtr = !*a.SettingPtr
+			if !t.persist() {
+				return "abort"
+			}
+		}
+	}
+	return "alerts"
+}
+
+func (t *session) runInfo() string {
+	fmt.Fprint(t.stdout, RenderInfo(t.lang))
+	readKey(t.reader)
+	return "menu"
+}
+
 // Run opens the interactive loop. Upgrade runs the existing upgrade flow
 // for the current distribution and returns its exit code. Run returns the
 // process exit code for the config command.
 func Run(pluginsDir string, stdin io.Reader, stdout io.Writer, upgrade func(io.Writer) int) int {
 	s, err := config.Load(pluginsDir)
 	if err != nil {
-		fmt.Fprintf(stdout, "Error: %s\n", err)
+		fmt.Fprintf(stdout, errorFormat, err)
 		return 1
 	}
-	lang := i18n.Normalize(s.Lang)
-	r := bufio.NewReader(stdin)
+	t := &session{
+		pluginsDir: pluginsDir,
+		settings:   s,
+		lang:       i18n.Normalize(s.Lang),
+		reader:     bufio.NewReader(stdin),
+		stdout:     stdout,
+	}
 	view := "menu"
 	for {
 		switch view {
 		case "menu":
-			fmt.Fprint(stdout, RenderMenu(lang))
-			switch readKey(r) {
-			case "1", "l", "language", "idioma":
-				view = "language"
-			case "2", "u", "update", "actualizar":
-				view = "update"
-			case "3", "i", "info":
-				view = "info"
-			case "4", "a", "alerts", "alertas":
-				view = "alerts"
-			case "5", "q", "quit", "exit", "salir", "esc":
-				return 0
-			}
+			view = t.runMenu()
 		case "language":
-			fmt.Fprint(stdout, RenderLanguage(lang))
-			switch readKey(r) {
-			case "1", "en":
-				lang = "en"
-				s.Lang = lang
-				if err := config.Save(pluginsDir, s); err != nil {
-					fmt.Fprintf(stdout, "Error: %s\n", err)
-					return 1
-				}
-			case "2", "es":
-				lang = "es"
-				s.Lang = lang
-				if err := config.Save(pluginsDir, s); err != nil {
-					fmt.Fprintf(stdout, "Error: %s\n", err)
-					return 1
-				}
-			case "q", "esc", "b", "back", "volver":
-				view = "menu"
-			}
+			view = t.runLanguage()
 		case "alerts":
-			fmt.Fprint(stdout, RenderAlerts(&s, lang))
-			key := readKey(r)
-			if key == "q" || key == "esc" || key == "b" || key == "back" || key == "volver" {
-				view = "menu"
-				continue
-			}
-			// Space-prefixed numbers (" 1") also toggle: TrimSpace already
-			// removed the space, so the digit alone is enough.
-			for _, a := range AlertItems(&s, lang) {
-				if key == a.Key {
-					*a.SettingPtr = !*a.SettingPtr
-					if err := config.Save(pluginsDir, s); err != nil {
-						fmt.Fprintf(stdout, "Error: %s\n", err)
-						return 1
-					}
-				}
-			}
+			view = t.runAlerts()
 		case "info":
-			fmt.Fprint(stdout, RenderInfo(lang))
-			readKey(r)
-			view = "menu"
+			view = t.runInfo()
 		case "update":
 			if upgrade != nil {
 				return upgrade(stdout)
 			}
 			return 0
+		case "exit":
+			return 0
+		default: // "abort": the error is already reported.
+			return 1
 		}
 	}
 }

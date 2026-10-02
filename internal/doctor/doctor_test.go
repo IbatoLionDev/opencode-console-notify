@@ -162,7 +162,10 @@ func TestDoctorStaysSilentWhenRegistryDown(t *testing.T) {
 	plugins := t.TempDir()
 	reg := &aumid.FakeRegistry{}
 	seedHealthyInstall(t, plugins, reg)
-	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {}))
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		// Empty on purpose: the handler must produce no usable response so
+		// the test server simulates a dead registry (it is closed right away).
+	}))
 	url := server.URL
 	server.Close()
 	swapRegistryURL(t, url)
