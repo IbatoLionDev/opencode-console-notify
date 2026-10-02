@@ -18,13 +18,53 @@
  * remains a valid fallback if auto-registration is ever blocked.
  */
 
-import { appendFileSync } from "node:fs"
+import { appendFileSync, readFileSync } from "node:fs"
 import { basename, join } from "node:path"
+import { homedir } from "node:os"
 
 const AUMID = "OpenCode.Notifier"
 const COOLDOWN_MS = 4000
 const MAX_LINE = 160
 const DEBUG_LOG = join(process.env.TEMP || process.env.TMP || ".", "opencode-console-notify.debug.log")
+
+// Config file written by the config command (v2.0.0). Missing or corrupt
+// means v1 behavior: everything on, English.
+function loadPluginSettings() {
+  const fallback = { lang: "en", alerts: { sessionIdle: true, sessionError: true, permissionAsked: true, questionAsked: true } }
+  try {
+    const home = homedir()
+    if (!home) return fallback
+    const raw = readFileSync(join(home, ".config", "opencode", "plugins", "console-notify.config.json"), "utf8")
+    const parsed = JSON.parse(raw)
+    const alerts = parsed?.alerts ?? {}
+    return {
+      lang: parsed?.lang === "es" ? "es" : "en",
+      alerts: {
+        sessionIdle: alerts.sessionIdle !== false,
+        sessionError: alerts.sessionError !== false,
+        permissionAsked: alerts.permissionAsked !== false,
+        questionAsked: alerts.questionAsked !== false,
+      },
+    }
+  } catch {
+    return fallback
+  }
+}
+
+const TEXTS = {
+  en: {
+    idle: "Task finished — waiting for your input",
+    error: "Something went wrong — check the console",
+    permission: "Permission needed to continue",
+    question: "OpenCode asked you a question",
+  },
+  es: {
+    idle: "Tarea terminada — esperando tu entrada",
+    error: "Algo salió mal — revisa la consola",
+    permission: "Permiso necesario para continuar",
+    question: "OpenCode te hizo una pregunta",
+  },
+}
 
 function dbg(message) {
   try {
@@ -172,24 +212,32 @@ export default async ({ client, $, directory }) => {
   }
 
   const handleIdle = async (p) => {
+    const settings = loadPluginSettings()
+    if (!settings.alerts.sessionIdle) return
     if (await isChild(p.sessionID)) return
-    notify(`idle:${p.sessionID ?? "unknown"}`, ["Task finished \u2014 waiting for your input"])
+    notify(`idle:${p.sessionID ?? "unknown"}`, [TEXTS[settings.lang].idle])
   }
 
   const handleError = async (p) => {
+    const settings = loadPluginSettings()
+    if (!settings.alerts.sessionError) return
     if (await isChild(p.sessionID)) return
     const detail = typeof p.error === "string" ? truncate(p.error) : ""
-    notify(`error:${p.sessionID ?? "unknown"}`, ["Something went wrong \u2014 check the console", detail])
+    notify(`error:${p.sessionID ?? "unknown"}`, [TEXTS[settings.lang].error, detail])
   }
 
   const handlePermission = (p) => {
-    notify(`perm:${p.id ?? p.sessionID ?? "unknown"}`, ["Permission needed to continue"])
+    const settings = loadPluginSettings()
+    if (!settings.alerts.permissionAsked) return
+    notify(`perm:${p.id ?? p.sessionID ?? "unknown"}`, [TEXTS[settings.lang].permission])
   }
 
   const handleQuestion = (p) => {
+    const settings = loadPluginSettings()
+    if (!settings.alerts.questionAsked) return
     const raw = Array.isArray(p.questions) ? p.questions[0]?.question : undefined
     notify(`question:${p.id ?? p.sessionID ?? "unknown"}`, [
-      "OpenCode asked you a question",
+      TEXTS[settings.lang].question,
       raw ? truncate(raw) : "",
     ])
   }

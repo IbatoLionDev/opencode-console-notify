@@ -88,3 +88,37 @@ func TestRunDoctorEndToEnd(t *testing.T) {
 		t.Fatalf("run uninstall exited %d: %s", code, errOut.String())
 	}
 }
+
+func TestParseConfigArgs(t *testing.T) {
+	cmd, _, rest, err := parseArgsFull([]string{"config", "--lang", "es"})
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if cmd != "config" || len(rest) != 2 || rest[0] != "--lang" || rest[1] != "es" {
+		t.Fatalf("got (%q, %q)", cmd, rest)
+	}
+	if _, _, _, err := parseArgsFull([]string{"install", "extra"}); err == nil {
+		t.Fatal("expected error for extra positional on install")
+	}
+}
+
+func TestRunConfigFlags(t *testing.T) {
+	plugins := t.TempDir()
+	reg := &aumid.FakeRegistry{}
+	var out, errOut bytes.Buffer
+
+	if code := Run([]string{"config", pluginsDirFlag, plugins, "--lang", "es"}, reg, &out, &errOut); code != 0 {
+		t.Fatalf("config --lang exited %d: %s", code, errOut.String())
+	}
+	out.Reset()
+	if code := Run([]string{"config", pluginsDirFlag, plugins, "--toggle", "sessionIdle=off"}, reg, &out, &errOut); code != 0 {
+		t.Fatalf("config --toggle exited %d: %s", code, errOut.String())
+	}
+	out.Reset()
+	if code := Run([]string{"config", pluginsDirFlag, plugins, "--list-alerts"}, reg, &out, &errOut); code != 0 {
+		t.Fatalf("config --list-alerts exited %d: %s", code, errOut.String())
+	}
+	if code := Run([]string{"config", pluginsDirFlag, plugins, "--toggle", "bogus=on"}, reg, &out, &errOut); code == 0 {
+		t.Fatal("config --toggle bogus must exit non-zero")
+	}
+}
