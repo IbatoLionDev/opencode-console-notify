@@ -3,6 +3,8 @@ package doctor
 import (
 	"bytes"
 	"errors"
+	"net/http"
+	"net/http/httptest"
 	"os"
 	"path/filepath"
 	"strings"
@@ -11,6 +13,7 @@ import (
 	"github.com/IbatoLionDev/opencode-console-notify/internal/aumid"
 	"github.com/IbatoLionDev/opencode-console-notify/internal/config"
 	"github.com/IbatoLionDev/opencode-console-notify/internal/installer"
+	"github.com/IbatoLionDev/opencode-console-notify/internal/version"
 	"github.com/IbatoLionDev/opencode-console-notify/plugin"
 )
 
@@ -117,5 +120,58 @@ func TestDoctorAgainstMissingDirectory(t *testing.T) {
 	}
 	if report.Healthy() || report.PluginOK {
 		t.Fatalf("missing directory must not be healthy: %+v", report)
+	}
+}
+
+func seedHealthyInstall(t *testing.T, plugins string, reg *aumid.FakeRegistry) {
+	t.Helper()
+	if err := installer.Install(plugins, reg, &bytes.Buffer{}); err != nil {
+		t.Fatalf("Install failed: %v", err)
+	}
+}
+
+func swapRegistryURL(t *testing.T, url string) {
+	t.Helper()
+	old := registryURL
+	registryURL = url
+	t.Cleanup(func() { registryURL = old })
+}
+
+func TestDoctorPrintsUpdateNoticeWhenNewer(t *testing.T) {
+	plugins := t.TempDir()
+	reg := &aumid.FakeRegistry{}
+	seedHealthyInstall(t, plugins, reg)
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		w.Write([]byte(`{"version":"9.9.9"}`))
+	}))
+	defer server.Close()
+	swapRegistryURL(t, server.URL)
+
+	var out bytes.Buffer
+	if code := Doctor(plugins, reg, &out); code != 0 {
+		t.Fatalf("healthy doctor exited %d, want 0", code)
+	}
+	want := "Update available: " + version.Version + " -> 9.9.9"
+	if !strings.Contains(out.String(), want) {
+		t.Fatalf("doctor must print update notice %q, got:\n%s", want, out.String())
+	}
+}
+
+func TestDoctorStaysSilentWhenRegistryDown(t *testing.T) {
+	plugins := t.TempDir()
+	reg := &aumid.FakeRegistry{}
+	seedHealthyInstall(t, plugins, reg)
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {}))
+	url := server.URL
+	server.Close()
+	swapRegistryURL(t, url)
+
+	var out bytes.Buffer
+	if code := Doctor(plugins, reg, &out); code != 0 {
+		t.Fatalf("healthy doctor with dead registry exited %d, want 0", code)
+	}
+	if strings.Contains(out.String(), "Update available") {
+		t.Fatalf("doctor must stay silent when registry is down, got:\n%s", out.String())
 	}
 }

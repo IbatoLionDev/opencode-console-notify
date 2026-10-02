@@ -3,6 +3,15 @@
 All notable changes to this project are documented here, newest first.
 Version headers link to the GitHub release when one exists.
 
+## [1.3.0] - 2026-10-01
+
+### Added
+
+- `doctor` (npm and Go) prints an automatic update notice
+  (`Update available: <local> -> <latest>`) when the npm registry reports a
+  newer release. The check is best-effort with a short timeout: offline or
+  unreachable registries stay silent and never change the exit code.
+
 ## [1.2.1] - 2026-10-01
 
 ### Added
