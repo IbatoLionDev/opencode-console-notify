@@ -3,6 +3,11 @@
 All notable changes to this project are documented here, newest first.
 Version headers link to the GitHub release when one exists.
 
+## [1.3.1] - 2026-10-02
+
+Internal restructuring under clean-architecture layering; no behavior,
+message, flag, or exit-code changes.
+
 ## [1.3.0] - 2026-10-01
 
 ### Added
