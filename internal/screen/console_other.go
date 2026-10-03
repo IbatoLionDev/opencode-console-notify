@@ -10,3 +10,8 @@ var errWindowsOnly = errors.New("fullscreen console requires Windows")
 func Enable() (func(), error) {
 	return func() {}, errWindowsOnly
 }
+
+// Size reports a fixed fallback outside Windows.
+func Size() (int, int) {
+	return 80, 24
+}

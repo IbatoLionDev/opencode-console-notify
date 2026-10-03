@@ -6,6 +6,7 @@ import (
 	"errors"
 	"os"
 	"syscall"
+	"unsafe"
 )
 
 // Virtual-terminal and input flags (kernel32 console modes). Defined here
@@ -23,6 +24,45 @@ const (
 // kernel32 console procs used directly because stdlib syscall only exposes
 // the Get half of the console-mode pair.
 var procSetConsoleMode = syscall.NewLazyDLL("kernel32.dll").NewProc("SetConsoleMode")
+
+var procGetScreenInfo = syscall.NewLazyDLL("kernel32.dll").NewProc("GetConsoleScreenBufferInfo")
+
+// windowRect is the visible console window in character cells.
+type windowRect struct {
+	left   int16
+	top    int16
+	right  int16
+	bottom int16
+}
+
+// screenBufferInfo mirrors CONSOLE_SCREEN_BUFFER_INFO up to the window
+// rect; later fields are not needed.
+type screenBufferInfo struct {
+	size   [2]int16
+	cursor [2]int16
+	attrs  uint16
+	window windowRect
+	maxWin [2]int16
+}
+
+// Size reports the visible console window in columns and rows, defaulting
+// to 80x24 when the console cannot answer.
+func Size() (int, int) {
+	var info screenBufferInfo
+	r1, _, _ := procGetScreenInfo.Call(uintptr(syscall.Handle(os.Stdout.Fd())), uintptr(unsafe.Pointer(&info)))
+	if r1 == 0 {
+		return 80, 24
+	}
+	w := int(info.window.right-info.window.left) + 1
+	h := int(info.window.bottom-info.window.top) + 1
+	if w < 10 {
+		w = 10
+	}
+	if h < 4 {
+		h = 4
+	}
+	return w, h
+}
 
 // Enable prepares the console for fullscreen input and ANSI output: raw
 // key bytes (line and echo off, VT input on so arrows arrive as escape
