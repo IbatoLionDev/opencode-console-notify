@@ -31,7 +31,9 @@ const exitCodeFormat = "exit code = %d, want 0"
 
 // noopRestore stands in for the console restore func: scripted loops never
 // touch the real console, so there is nothing to restore.
-func noopRestore() {}
+func noopRestore() {
+	// Empty on purpose (see above): no console was enabled in tests.
+}
 
 func TestFullscreenNavigateExit(t *testing.T) {
 	dir := t.TempDir()

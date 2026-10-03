@@ -55,6 +55,18 @@ func linesPerItem(it Item) int {
 	return 2
 }
 
+// fitRow fits one pre-selection row into the window, restarting the
+// window at (or just after) the row on overflow.
+func fitRow(start, used, i, need, height int, isSel bool) (int, int) {
+	if used+need <= height {
+		return start, used + need
+	}
+	if isSel {
+		return i, need
+	}
+	return i + 1, 0
+}
+
 // Viewport slices items to the rows around selected so the selection stays
 // visible. It returns the visible items and how many leading items were
 // skipped. Height <= 0 disables scrolling.
@@ -62,39 +74,20 @@ func Viewport(items []Item, selected, height int) ([]Item, int) {
 	if height <= 0 || len(items) == 0 {
 		return items, 0
 	}
-	if selected < 0 {
-		selected = 0
-	}
-	if selected >= len(items) {
-		selected = len(items) - 1
-	}
+	selected = ClampSelection(len(items), selected)
 	// Grow the window from the top until the selected row fits.
 	start := 0
 	used := 0
 	for i, it := range items {
 		need := linesPerItem(it)
-		if i < selected {
+		if i > selected {
 			if used+need > height {
-				start = i + 1
-				used = 0
-			} else {
-				used += need
+				return items[start:i], start
 			}
+			used += need
 			continue
 		}
-		if i == selected {
-			if used+need > height {
-				start = i
-				used = need
-			} else {
-				used += need
-			}
-			continue
-		}
-		if used+need > height {
-			return items[start:i], start
-		}
-		used += need
+		start, used = fitRow(start, used, i, need, height, i == selected)
 	}
 	return items[start:], start
 }
