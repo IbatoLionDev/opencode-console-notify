@@ -4,6 +4,14 @@
   "private": false,
   "type": "module",
   "description": "Zero-dependency npm/npx install path for opencode-console-notify: copies the Windows toast plugin into the OpenCode plugins directory and registers the OpenCode.Notifier AUMID (HKCU only, no admin).",
+  "homepage": "https://github.com/IbatoLionDev/opencode-console-notify#readme",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/IbatoLionDev/opencode-console-notify.git"
+  },
+  "bugs": {
+    "url": "https://github.com/IbatoLionDev/opencode-console-notify/issues"
+  },
   "bin": {
     "opencode-console-notify": "bin/opencode-console-notify.js"
   },

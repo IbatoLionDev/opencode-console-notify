@@ -221,4 +221,4 @@ roadmap and contributions are welcome.
 
 ## License
 
-MIT — see [LICENSE](LICENSE).
+MIT — see [LICENSE](LICENSE.md).
