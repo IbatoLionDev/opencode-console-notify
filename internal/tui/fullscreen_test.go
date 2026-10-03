@@ -25,11 +25,19 @@ func newTestLoop(dir, lang, input string) (*screenLoop, *bytes.Buffer) {
 	return l, &out
 }
 
+// exitCodeFormat reports a loop exit mismatch; one constant for every
+// scripted-loop test below.
+const exitCodeFormat = "exit code = %d, want 0"
+
+// noopRestore stands in for the console restore func: scripted loops never
+// touch the real console, so there is nothing to restore.
+func noopRestore() {}
+
 func TestFullscreenNavigateExit(t *testing.T) {
 	dir := t.TempDir()
 	l, out := newTestLoop(dir, "en", "j\x1b[Aq")
-	if code := l.loop(func() {}); code != 0 {
-		t.Fatalf("exit code = %d, want 0", code)
+	if code := l.loop(noopRestore); code != 0 {
+		t.Fatalf(exitCodeFormat, code)
 	}
 	if !strings.Contains(out.String(), "> ") {
 		t.Fatal("output must mark the selection in place")
@@ -39,8 +47,8 @@ func TestFullscreenNavigateExit(t *testing.T) {
 func TestFullscreenTogglePersists(t *testing.T) {
 	dir := t.TempDir()
 	l, _ := newTestLoop(dir, "en", "4 qq")
-	if code := l.loop(func() {}); code != 0 {
-		t.Fatalf("exit code = %d, want 0", code)
+	if code := l.loop(noopRestore); code != 0 {
+		t.Fatalf(exitCodeFormat, code)
 	}
 	s, err := config.Load(dir)
 	if err != nil {
@@ -54,8 +62,8 @@ func TestFullscreenTogglePersists(t *testing.T) {
 func TestFullscreenLanguagePersists(t *testing.T) {
 	dir := t.TempDir()
 	l, _ := newTestLoop(dir, "en", "12qq")
-	if code := l.loop(func() {}); code != 0 {
-		t.Fatalf("exit code = %d, want 0", code)
+	if code := l.loop(noopRestore); code != 0 {
+		t.Fatalf(exitCodeFormat, code)
 	}
 	s, err := config.Load(dir)
 	if err != nil {
@@ -69,8 +77,8 @@ func TestFullscreenLanguagePersists(t *testing.T) {
 func TestFullscreenInfoBacksOut(t *testing.T) {
 	dir := t.TempDir()
 	l, out := newTestLoop(dir, "en", "3xq")
-	if code := l.loop(func() {}); code != 0 {
-		t.Fatalf("exit code = %d, want 0", code)
+	if code := l.loop(noopRestore); code != 0 {
+		t.Fatalf(exitCodeFormat, code)
 	}
 	if !strings.Contains(out.String(), "releases:") {
 		t.Fatal("info view must render the links in place")
@@ -85,7 +93,7 @@ func TestFullscreenUpdateDelegates(t *testing.T) {
 		called = true
 		return 7
 	}
-	if code := l.loop(func() {}); code != 7 {
+	if code := l.loop(noopRestore); code != 7 {
 		t.Fatalf("exit code = %d, want upgrade code 7", code)
 	}
 	if !called {

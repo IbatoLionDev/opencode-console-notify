@@ -113,6 +113,35 @@ func padCell(text string, width int) string {
 	return text + strings.Repeat(" ", width-len(text))
 }
 
+// renderLabel paints one item row with its selection marker.
+func renderLabel(it Item, selected bool, width int) string {
+	marker := "  "
+	if selected {
+		marker = "> "
+	}
+	label := it.Label
+	if it.State != "" {
+		label += " [" + it.State + "]"
+	}
+	cell := marker + padCell(label, width-len(marker))
+	if !selected {
+		return cell + "\n"
+	}
+	return BgDarkRed + FgWhite + Bold + cell + Reset + BgBlack + FgWhite + "\n"
+}
+
+// renderDetail paints the dim second line of one item, or nothing.
+func renderDetail(it Item, selected bool, width int) string {
+	if it.Detail == "" {
+		return ""
+	}
+	cell := "  " + padCell(Dim+it.Detail, width-2)
+	if !selected {
+		return cell + Reset + BgBlack + FgWhite + "\n"
+	}
+	return BgDarkRed + FgWhite + cell + Reset + BgBlack + FgWhite + "\n"
+}
+
 // Render builds one full screen: home cursor, title, bordered item list
 // with the selected row highlighted, and the footer. Selection marker `>`
 // stays visible even on terminals that ignore colors.
@@ -121,33 +150,16 @@ func Render(f Frame, width int) string {
 		width = 10
 	}
 	visible, offset := Viewport(f.Items, f.Selected, f.Height)
+	selected := ClampSelection(len(f.Items), f.Selected)
 	var b strings.Builder
 	b.WriteString(Home)
 	b.WriteString(BgBlack + FgWhite)
 	b.WriteString(Bold + f.Title + Reset + BgBlack + FgWhite + "\n")
 	b.WriteString(border(width) + "\n")
 	for i, it := range visible {
-		selected := offset+i == ClampSelection(len(f.Items), f.Selected)
-		marker := "  "
-		if selected {
-			marker = "> "
-		}
-		label := it.Label
-		if it.State != "" {
-			label += " [" + it.State + "]"
-		}
-		if selected {
-			b.WriteString(BgDarkRed + FgWhite + Bold + marker + padCell(label, width-len(marker)) + Reset + BgBlack + FgWhite + "\n")
-		} else {
-			b.WriteString(marker + padCell(label, width-len(marker)) + "\n")
-		}
-		if it.Detail != "" {
-			if selected {
-				b.WriteString(BgDarkRed + FgWhite + "  " + padCell(Dim+it.Detail, width-2) + Reset + BgBlack + FgWhite + "\n")
-			} else {
-				b.WriteString("  " + Dim + padCell(it.Detail, width-2) + Reset + BgBlack + FgWhite + "\n")
-			}
-		}
+		sel := offset+i == selected
+		b.WriteString(renderLabel(it, sel, width))
+		b.WriteString(renderDetail(it, sel, width))
 	}
 	b.WriteString(border(width) + "\n")
 	b.WriteString(FgGray + f.Footer + Reset + "\n")

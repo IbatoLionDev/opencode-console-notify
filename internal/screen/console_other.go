@@ -8,7 +8,9 @@ var errWindowsOnly = errors.New("fullscreen console requires Windows")
 
 // Enable always fails outside Windows so callers fall back to line mode.
 func Enable() (func(), error) {
-	return func() {}, errWindowsOnly
+	return func() {
+		// Empty on purpose: nothing was enabled, so nothing needs restoring.
+	}, errWindowsOnly
 }
 
 // Size reports a fixed fallback outside Windows.

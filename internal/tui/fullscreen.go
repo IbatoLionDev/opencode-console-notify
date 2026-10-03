@@ -169,7 +169,7 @@ func alertSetting(s *config.Settings, idx int) *bool {
 
 func (l *screenLoop) persistSettings() bool {
 	if err := config.Save(l.pluginsDir, l.settings); err != nil {
-		fmt.Fprintf(l.out, "Error: %s\n", err)
+		fmt.Fprintf(l.out, errorFormat, err)
 		return false
 	}
 	return true
@@ -350,12 +350,12 @@ func (l *screenLoop) loop(restore func()) int {
 func RunFullscreen(pluginsDir string, stdin io.Reader, stdout io.Writer, upgrade func(io.Writer) int) int {
 	s, err := config.Load(pluginsDir)
 	if err != nil {
-		fmt.Fprintf(stdout, "Error: %s\n", err)
+		fmt.Fprintf(stdout, errorFormat, err)
 		return 1
 	}
 	restore, err := screen.Enable()
 	if err != nil {
-		fmt.Fprintf(stdout, "Error: %s\n", err)
+		fmt.Fprintf(stdout, errorFormat, err)
 		return 1
 	}
 	defer restore()
