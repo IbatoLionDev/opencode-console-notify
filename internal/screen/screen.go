@@ -99,11 +99,19 @@ func border(width int) string {
 	return FgRed + "+" + strings.Repeat("-", width-2) + "+" + Reset
 }
 
+// cellWidth counts visible runes. ANSI codes must wrap already-padded
+// text, never sit inside the measured span otherwise the background ends
+// short; byte counting also splits multibyte runes on truncate.
+func cellWidth(s string) int {
+	return len([]rune(s))
+}
+
 func padCell(text string, width int) string {
-	if len(text) > width {
-		return text[:width]
+	runes := []rune(text)
+	if len(runes) > width {
+		return string(runes[:width])
 	}
-	return text + strings.Repeat(" ", width-len(text))
+	return text + strings.Repeat(" ", width-len(runes))
 }
 
 // renderLabel paints one item row with its selection marker.
@@ -124,11 +132,12 @@ func renderLabel(it Item, selected bool, width int) string {
 }
 
 // renderDetail paints the dim second line of one item, or nothing.
+// Dim wraps the padded text so every row ends on the same column.
 func renderDetail(it Item, selected bool, width int) string {
 	if it.Detail == "" {
 		return ""
 	}
-	cell := "  " + padCell(Dim+it.Detail, width-2)
+	cell := "  " + Dim + padCell(it.Detail, width-2)
 	if !selected {
 		return cell + Reset + BgBlack + FgWhite + "\n"
 	}

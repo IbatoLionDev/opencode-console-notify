@@ -3,6 +3,15 @@
 All notable changes to this project are documented here, newest first.
 Version headers link to the GitHub release when one exists.
 
+## [2.1.1] - 2026-10-03
+
+### Fixed
+
+- Fullscreen rows now end on the same column: the dim detail line measured
+  the ANSI dim code as visible text (background ended 4 cells short) and
+  padding byte-counted accented runes. Padding is rune-aware in both
+  runtimes, covered by a Go regression test and a JS probe.
+
 ## [2.1.0] - 2026-10-03
 
 ### Added

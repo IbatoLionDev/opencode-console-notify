@@ -127,3 +127,51 @@ func TestEnableRestoreRoundTrip(t *testing.T) {
 	}
 	restore()
 }
+
+// stripANSI removes SGR sequences (ESC [ ... m) for visible-width asserts.
+func stripANSI(s string) string {
+	var b strings.Builder
+	for i := 0; i < len(s); {
+		if s[i] == 0x1b && i+1 < len(s) && s[i+1] == '[' {
+			j := i + 2
+			for j < len(s) && (s[j] < '@' || s[j] > '~') {
+				j++
+			}
+			i = j + 1
+			continue
+		}
+		b.WriteByte(s[i])
+		i++
+	}
+	return b.String()
+}
+
+func TestRenderRowsEndEven(t *testing.T) {
+	f := Frame{
+		Title: "T",
+		Items: []Item{
+			{Label: "Tarea terminada [activada]"},
+			{Label: "Algo salió mal [activada]", Detail: "sesión con tildes: falló ñandú"},
+		},
+		Selected: 1,
+		Footer:   "keys",
+		Height:   10,
+	}
+	width := 40
+	var rows []string
+	for _, line := range strings.Split(Render(f, width), "\n") {
+		plain := stripANSI(line)
+		// Only item rows are padded to full width (title/footer are not).
+		if strings.HasPrefix(plain, "> ") || strings.HasPrefix(plain, "  ") {
+			rows = append(rows, plain)
+		}
+	}
+	if len(rows) != 3 {
+		t.Fatalf("want 3 item rows, got %q", rows)
+	}
+	for _, row := range rows {
+		if len([]rune(row)) != width {
+			t.Fatalf("row %q has visible width %d, want %d", row, len([]rune(row)), width)
+		}
+	}
+}
