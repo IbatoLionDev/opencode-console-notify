@@ -3,6 +3,7 @@ package tui
 import (
 	"bytes"
 	"io"
+	"os"
 	"strings"
 	"testing"
 
@@ -97,5 +98,26 @@ func TestMenuTarget(t *testing.T) {
 		if got := menuTarget(sel); got != want {
 			t.Fatalf("menuTarget(%d) = %q, want %q", sel, got, want)
 		}
+	}
+}
+
+func TestRunSmartFallsBackOffConsole(t *testing.T) {
+	dir := t.TempDir()
+	r, w, err := os.Pipe()
+	if err != nil {
+		t.Fatalf("pipe failed: %v", err)
+	}
+	defer r.Close()
+	if _, err := w.WriteString("5\n"); err != nil {
+		t.Fatalf("seed failed: %v", err)
+	}
+	w.Close()
+	var out bytes.Buffer
+	// Pipes are not consoles, so RunSmart must run the line mode.
+	if code := RunSmart(dir, r, &out, nil); code != 0 {
+		t.Fatalf("fallback exit code = %d, want 0", code)
+	}
+	if !strings.Contains(out.String(), "Salir") && !strings.Contains(out.String(), "Exit") {
+		t.Fatal("fallback must render the line-mode menu")
 	}
 }

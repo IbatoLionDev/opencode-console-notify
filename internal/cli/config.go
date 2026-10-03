@@ -163,7 +163,7 @@ func dispatchConfigFlag(pluginsDir string, configArgs []string, stdout io.Writer
 // flags keep scripts non-interactive.
 func runConfig(pluginsDir string, configArgs []string, reg aumid.Registry, stdout io.Writer) int {
 	if len(configArgs) == 0 {
-		return tui.Run(pluginsDir, os.Stdin, stdout, upgradeFromEmbedded(pluginsDir, reg, stdout))
+		return tui.RunSmart(pluginsDir, os.Stdin, stdout, upgradeFromEmbedded(pluginsDir, reg, stdout))
 	}
 	return dispatchConfigFlag(pluginsDir, configArgs, stdout)
 }

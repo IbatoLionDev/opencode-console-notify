@@ -3,6 +3,17 @@
 All notable changes to this project are documented here, newest first.
 Version headers link to the GitHub release when one exists.
 
+## [2.1.0] - Unreleased
+
+### Added
+
+- `config` TUI is now fullscreen on a real console (Go and npm,
+  English/Spanish): in-place redraw with j/k/arrows navigation, Enter
+  select, Space toggle, scrollable viewport, and the black/red/white
+  palette. On pipes and scripts the previous line mode runs unchanged, as
+  do all flags (`--lang`, `--toggle`, `--list-alerts`, `--info`). Zero new
+  dependencies. Mouse click support is planned for 2.2.
+
 ## [2.0.0] - 2026-10-02
 
 ### Added
