@@ -1,5 +1,6 @@
 // Settings persistence for the config command (v2.0.0).
 // Missing file means current behavior: everything on, English.
+// Schema v2 adds custom alerts; v1 files migrate silently.
 package config
 
 import (
@@ -14,7 +15,7 @@ import (
 const SettingsFileName = "console-notify.config.json"
 
 // SettingsVersion is the schema version written by Save.
-const SettingsVersion = 1
+const SettingsVersion = 2
 
 // AlertSettings holds one on/off toggle per default notification.
 type AlertSettings struct {
@@ -26,9 +27,10 @@ type AlertSettings struct {
 
 // Settings is the persisted config command state.
 type Settings struct {
-	Version int           `json:"version"`
-	Lang    string        `json:"lang"`
-	Alerts  AlertSettings `json:"alerts"`
+	Version      int           `json:"version"`
+	Lang         string        `json:"lang"`
+	Alerts       AlertSettings `json:"alerts"`
+	CustomAlerts []CustomAlert `json:"customAlerts,omitempty"`
 }
 
 // Defaults returns the v1-compatible behavior: all alerts on, English.
@@ -45,12 +47,21 @@ func Defaults() Settings {
 	}
 }
 
-// Normalize replaces unknown languages with English and pins the version.
+// Normalize replaces unknown languages with English, pins the version,
+// and drops custom entries that can never fire (unknown event or empty
+// title) so one bad entry never breaks the file.
 func Normalize(s Settings) Settings {
 	if s.Lang != "en" && s.Lang != "es" {
 		s.Lang = "en"
 	}
 	s.Version = SettingsVersion
+	kept := s.CustomAlerts[:0]
+	for _, c := range s.CustomAlerts {
+		if ValidateCustom(c.Event, c.Title) == nil {
+			kept = append(kept, c)
+		}
+	}
+	s.CustomAlerts = kept
 	return s
 }
 
