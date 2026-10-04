@@ -4,6 +4,7 @@ package tui
 
 import (
 	"fmt"
+	"strconv"
 	"strings"
 
 	"github.com/IbatoLionDev/opencode-console-notify/internal/config"
@@ -26,6 +27,29 @@ type AlertItem struct {
 	Trigger    string
 	Enabled    bool
 	SettingPtr *bool
+}
+
+// AllAlertItems returns defaults followed by customs tagged as custom,
+// numbered from 1 in stable order. Customs get positional keys ("5", …)
+// so both TUI modes toggle them exactly like defaults.
+func AllAlertItems(s *config.Settings, lang string) []AlertItem {
+	items := AlertItems(s, lang)
+	for i := range s.CustomAlerts {
+		c := &s.CustomAlerts[i]
+		trigger := c.Event
+		if c.Body != "" {
+			trigger += " — " + c.Body
+		}
+		items = append(items, AlertItem{
+			Key:        strconv.Itoa(len(items) + 1),
+			Event:      c.Event,
+			Name:       c.Title + " [" + i18n.T(lang, "custom.tag") + "]",
+			Trigger:    trigger,
+			Enabled:    c.Enabled,
+			SettingPtr: &c.Enabled,
+		})
+	}
+	return items
 }
 
 // AlertItems returns the four default alerts in stable order.
@@ -76,11 +100,12 @@ func marker(active bool, lang string) string {
 	return ""
 }
 
-// RenderAlerts returns the alerts view with toggles and triggers.
+// RenderAlerts returns the alerts view with toggles and triggers,
+// defaults first then customs tagged as custom.
 func RenderAlerts(s *config.Settings, lang string) string {
 	var b strings.Builder
 	fmt.Fprintf(&b, "%s\n", i18n.T(lang, "alerts.title"))
-	for _, a := range AlertItems(s, lang) {
+	for _, a := range AllAlertItems(s, lang) {
 		fmt.Fprintf(&b, "%s. %s [%s]\n   %s\n", a.Key, a.Name, onOff(lang, a.Enabled), a.Trigger)
 	}
 	fmt.Fprintf(&b, "%s\n", i18n.T(lang, "footer.toggle"))

@@ -1,6 +1,7 @@
 package tui
 
 import (
+	"bytes"
 	"io"
 	"strings"
 	"testing"
@@ -99,5 +100,30 @@ func TestLineCustomsLifecycle(t *testing.T) {
 	}
 	if len(s.CustomAlerts) != 0 {
 		t.Fatalf("custom must be deleted, got %+v", s.CustomAlerts)
+	}
+}
+
+func TestAlertsShowsAndTogglesCustoms(t *testing.T) {
+	dir := t.TempDir()
+	s := config.Defaults()
+	if _, err := config.AddCustom(&s, "file.edited", "Build done", ""); err != nil {
+		t.Fatalf("seed failed: %v", err)
+	}
+	if err := config.Save(dir, s); err != nil {
+		t.Fatalf("seed save failed: %v", err)
+	}
+	var outBuf bytes.Buffer
+	if code := Run(dir, strings.NewReader("4\n5\nq\n6\n"), &outBuf, nil); code != 0 {
+		t.Fatalf("toggle run exit = %d", code)
+	}
+	if !strings.Contains(outBuf.String(), "[custom]") {
+		t.Fatalf("alerts must tag customs, got:\n%s", outBuf.String())
+	}
+	s, err := config.Load(dir)
+	if err != nil {
+		t.Fatalf("load failed: %v", err)
+	}
+	if s.CustomAlerts[0].Enabled {
+		t.Fatal("custom #5 must be off after toggle")
 	}
 }

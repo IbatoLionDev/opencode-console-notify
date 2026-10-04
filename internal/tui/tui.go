@@ -97,7 +97,7 @@ func (t *session) runAlerts() string {
 	}
 	// Space-prefixed numbers (" 1") also toggle: TrimSpace already
 	// removed the space, so the digit alone is enough.
-	for _, a := range AlertItems(&t.settings, t.lang) {
+	for _, a := range AllAlertItems(&t.settings, t.lang) {
 		if key == a.Key {
 			*a.SettingPtr = !*a.SettingPtr
 			if !t.persist() {
