@@ -146,6 +146,13 @@ func stripANSI(s string) string {
 	return b.String()
 }
 
+func TestRenderErasesPreviousFrame(t *testing.T) {
+	out := Render(Frame{Title: "T", Items: []Item{{Label: "one"}}, Footer: "k", Height: 10}, 20)
+	if !strings.HasPrefix(out, Home+EraseBelow) {
+		t.Fatal("every frame must start with Home+EraseBelow so shorter views leave no ghosts")
+	}
+}
+
 func TestRenderRowsEndEven(t *testing.T) {
 	f := Frame{
 		Title: "T",

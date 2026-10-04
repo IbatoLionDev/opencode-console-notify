@@ -26,6 +26,7 @@ const (
 	AltLeave   = "\x1b[?1049l"
 	Home       = "\x1b[H"
 	Clear      = "\x1b[2J"
+	EraseBelow = "\x1b[J"
 )
 
 // Item is one selectable row. Detail renders as a dim second line and may
@@ -154,7 +155,7 @@ func Render(f Frame, width int) string {
 	visible, offset := Viewport(f.Items, f.Selected, f.Height)
 	selected := ClampSelection(len(f.Items), f.Selected)
 	var b strings.Builder
-	b.WriteString(Home)
+	b.WriteString(Home + EraseBelow)
 	b.WriteString(BgBlack + FgWhite)
 	b.WriteString(Bold + f.Title + Reset + BgBlack + FgWhite + "\n")
 	b.WriteString(border(width) + "\n")

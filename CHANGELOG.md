@@ -3,6 +3,14 @@
 All notable changes to this project are documented here, newest first.
 Version headers link to the GitHub release when one exists.
 
+## [2.1.2] - 2026-10-04
+
+### Fixed
+
+- Switching to a shorter fullscreen view no longer leaves ghost lines (or
+  title tails) from the previous one: every frame starts with Home plus
+  erase-below, in both runtimes.
+
 ## [2.1.1] - 2026-10-03
 
 ### Fixed
