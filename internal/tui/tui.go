@@ -47,7 +47,9 @@ func menuTransition(key string) string {
 		return "info"
 	case "4", "a", "alerts", "alertas":
 		return "alerts"
-	case "5", "q", "quit", "exit", "salir", "esc":
+	case "5", "c", "customs", "custom":
+		return "customs"
+	case "6", "q", "quit", "exit", "salir", "esc":
 		return "exit"
 	}
 	return "menu"
@@ -137,6 +139,8 @@ func Run(pluginsDir string, stdin io.Reader, stdout io.Writer, upgrade func(io.W
 			view = t.runLanguage()
 		case "alerts":
 			view = t.runAlerts()
+		case "customs":
+			view = t.runCustomsLine()
 		case "info":
 			view = t.runInfo()
 		case "update":

@@ -53,7 +53,8 @@ func RenderMenu(lang string) string {
 	fmt.Fprintf(&b, "2. %s (U)\n", i18n.T(lang, "menu.update"))
 	fmt.Fprintf(&b, "3. %s (I)\n", i18n.T(lang, "menu.info"))
 	fmt.Fprintf(&b, "4. %s (A)\n", i18n.T(lang, "menu.alerts"))
-	fmt.Fprintf(&b, "5. %s (Q)\n", i18n.T(lang, "menu.exit"))
+	fmt.Fprintf(&b, "5. %s (C)\n", i18n.T(lang, "menu.customs"))
+	fmt.Fprintf(&b, "6. %s (Q)\n", i18n.T(lang, "menu.exit"))
 	fmt.Fprintf(&b, "%s\n", i18n.T(lang, "footer.menu"))
 	return b.String()
 }

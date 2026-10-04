@@ -54,6 +54,7 @@ var en = map[string]string{
 	"customs.confirmDelete":   "Delete \"%s\"? (y/n): ",
 	"customs.catalogTitle":    "Subscribable events (! = noisy)",
 	"customs.optional":        "empty = none",
+	"customs.lineFooter":      "Number toggles | A add E <n> edit D <n> delete C catalog | Q back",
 }
 
 var es = map[string]string{
@@ -94,6 +95,7 @@ var es = map[string]string{
 	"customs.confirmDelete":   "¿Eliminar \"%s\"? (s/n): ",
 	"customs.catalogTitle":    "Eventos disponibles (! = ruidoso)",
 	"customs.optional":        "vacío = ninguno",
+	"customs.lineFooter":      "Número activa/desactiva | A añadir E <n> editar D <n> eliminar C catálogo | Q volver",
 }
 
 // T returns the string for key in lang, falling back to English and
