@@ -3,6 +3,10 @@
   "version": "2.2.0",
   "private": false,
   "type": "module",
+  "scripts": {
+    "dev": "node ./tools/dev.mjs",
+    "dev:go": "node ./tools/dev.mjs go"
+  },
   "description": "Zero-dependency npm/npx install path for opencode-console-notify: copies the Windows toast plugin into the OpenCode plugins directory and registers the OpenCode.Notifier AUMID (HKCU only, no admin).",
   "homepage": "https://github.com/IbatoLionDev",
   "repository": {

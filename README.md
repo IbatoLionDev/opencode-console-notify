@@ -154,6 +154,19 @@ defaults, and the plugin fires them with the same child-session rule.
 Settings persist in `console-notify.config.json` next to the plugin file;
 without it everything stays as in v1 (all alerts on, English).
 
+### Dev runs (isolated sandbox)
+
+```powershell
+npm run dev -- config
+npm run dev:go -- config --list-alerts
+```
+
+Runs the repo copy (JS or Go) against `.dev-sandbox/` instead of the real
+plugins directory or any global install: settings persist between dev runs
+but your installed copy is never touched. Pass `--plugins-dir` explicitly
+to use another directory. `doctor` and `test` are intentionally left out —
+try toasts from a real install.
+
 ### Then
 
 Restart OpenCode.
