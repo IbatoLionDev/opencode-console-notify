@@ -25,9 +25,10 @@ Commands:
   test        Send a real Windows toast notification.
   upgrade     Reinstall the plugin from the embedded copy and verify.
               Newer binaries come from the GitHub Releases page.
-  config      Open the config TUI (language, update, info, alerts).
-              Flags for scripts: --lang en|es, --toggle KEY=on|off,
-              --list-alerts, --info.
+  config      Open the config TUI (language, update, info, alerts,
+              customs). Flags for scripts: --lang en|es,
+              --toggle KEY=on|off, --list-alerts, --list-events,
+              --list-customs, --info.
   version     Print the embedded binary version.
 
 Options:

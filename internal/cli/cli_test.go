@@ -2,9 +2,11 @@ package cli
 
 import (
 	"bytes"
+	"strings"
 	"testing"
 
 	"github.com/IbatoLionDev/opencode-console-notify/internal/aumid"
+	"github.com/IbatoLionDev/opencode-console-notify/internal/config"
 )
 
 const pluginsDirFlag = "--plugins-dir"
@@ -123,5 +125,44 @@ func TestRunConfigFlags(t *testing.T) {
 	}
 	if code := Run([]string{"config", pluginsDirFlag, plugins, "--toggle", "bogus=on"}, reg, &out, &errOut); code == 0 {
 		t.Fatal("config --toggle bogus must exit non-zero")
+	}
+}
+
+func TestRunConfigListFlags(t *testing.T) {
+	plugins := t.TempDir()
+	reg := &aumid.FakeRegistry{}
+	var out, errOut bytes.Buffer
+
+	out.Reset()
+	if code := Run([]string{"config", pluginsDirFlag, plugins, "--list-events"}, reg, &out, &errOut); code != 0 {
+		t.Fatalf("config --list-events exited %d: %s", code, errOut.String())
+	}
+	for _, want := range []string{"session.idle", "file.edited", "todo.updated"} {
+		if !strings.Contains(out.String(), want) {
+			t.Fatalf("--list-events misses %q", want)
+		}
+	}
+	out.Reset()
+	if code := Run([]string{"config", pluginsDirFlag, plugins, "--list-customs"}, reg, &out, &errOut); code != 0 {
+		t.Fatalf("config --list-customs exited %d: %s", code, errOut.String())
+	}
+	s, err := config.Load(plugins)
+	if err != nil {
+		t.Fatalf("load failed: %v", err)
+	}
+	if _, err := config.AddCustom(&s, "todo.updated", "Todos", ""); err != nil {
+		t.Fatalf("seed failed: %v", err)
+	}
+	if err := config.Save(plugins, s); err != nil {
+		t.Fatalf("seed save failed: %v", err)
+	}
+	out.Reset()
+	if code := Run([]string{"config", pluginsDirFlag, plugins, "--list-customs"}, reg, &out, &errOut); code != 0 {
+		t.Fatalf("config --list-customs exited %d: %s", code, errOut.String())
+	}
+	for _, want := range []string{"custom-1", "Todos", "[custom]"} {
+		if !strings.Contains(out.String(), want) {
+			t.Fatalf("--list-customs misses %q in:\n%s", want, out.String())
+		}
 	}
 }

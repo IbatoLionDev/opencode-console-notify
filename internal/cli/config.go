@@ -144,18 +144,64 @@ func dispatchValueFlag(pluginsDir string, configArgs []string, stdout io.Writer)
 	return 0, false
 }
 
+func printConfigEvents(pluginsDir string, stdout io.Writer) int {
+	s, err := config.Load(pluginsDir)
+	if err != nil {
+		fmt.Fprintf(stdout, errorFormat, err)
+		return 1
+	}
+	lang := i18n.Normalize(s.Lang)
+	for i, e := range config.KnownEvents() {
+		desc := e.DescEn
+		if lang == "es" {
+			desc = e.DescEs
+		}
+		mark := ""
+		if e.Noisy {
+			mark = " [!]"
+		}
+		fmt.Fprintf(stdout, "%d. %s: %s%s\n", i+1, e.Type, desc, mark)
+	}
+	return 0
+}
+
+func printConfigCustoms(pluginsDir string, stdout io.Writer) int {
+	s, err := config.Load(pluginsDir)
+	if err != nil {
+		fmt.Fprintf(stdout, errorFormat, err)
+		return 1
+	}
+	if len(s.CustomAlerts) == 0 {
+		fmt.Fprintf(stdout, "%s\n", i18n.T(s.Lang, "customs.empty"))
+		return 0
+	}
+	lang := i18n.Normalize(s.Lang)
+	for _, c := range s.CustomAlerts {
+		state := "state.on"
+		if !c.Enabled {
+			state = "state.off"
+		}
+		fmt.Fprintf(stdout, "%s: %s [%s] [%s]\n", c.ID, c.Title, i18n.T(lang, "custom.tag"), i18n.T(lang, state))
+	}
+	return 0
+}
+
 func dispatchConfigFlag(pluginsDir string, configArgs []string, stdout io.Writer) int {
 	arg := configArgs[0]
 	switch {
 	case arg == "--list-alerts" || arg == "-list-alerts":
 		return printAlerts(pluginsDir, stdout)
+	case arg == "--list-events" || arg == "-list-events":
+		return printConfigEvents(pluginsDir, stdout)
+	case arg == "--list-customs" || arg == "-list-customs":
+		return printConfigCustoms(pluginsDir, stdout)
 	case arg == "--info" || arg == "-info":
 		return printConfigInfo(pluginsDir, stdout)
 	}
 	if code, handled := dispatchValueFlag(pluginsDir, configArgs, stdout); handled {
 		return code
 	}
-	fmt.Fprintf(stdout, "Error: unknown config flag %q (want --lang|--toggle|--list-alerts|--info)\n", arg)
+	fmt.Fprintf(stdout, "Error: unknown config flag %q (want --lang|--toggle|--list-alerts|--list-events|--list-customs|--info)\n", arg)
 	return 2
 }
 
