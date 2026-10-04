@@ -49,7 +49,7 @@ func TestInteractiveToggleAndLanguage(t *testing.T) {
 	}
 	s, err := config.Load(dir)
 	if err != nil {
-		t.Fatalf("load failed: %v", err)
+		t.Fatalf(loadFailedFmt, err)
 	}
 	if s.Alerts.SessionIdle {
 		t.Fatal("sessionIdle should be off after toggle")
@@ -60,7 +60,7 @@ func TestInteractiveToggleAndLanguage(t *testing.T) {
 	}
 	s, err = config.Load(dir)
 	if err != nil {
-		t.Fatalf("load failed: %v", err)
+		t.Fatalf(loadFailedFmt, err)
 	}
 	if s.Lang != "es" {
 		t.Fatalf("lang = %q, want es", s.Lang)
@@ -75,7 +75,7 @@ func TestLineCustomsLifecycle(t *testing.T) {
 	}
 	s, err := config.Load(dir)
 	if err != nil {
-		t.Fatalf("load failed: %v", err)
+		t.Fatalf(loadFailedFmt, err)
 	}
 	if len(s.CustomAlerts) != 1 || s.CustomAlerts[0].Event != "session.created" || s.CustomAlerts[0].Title != "Line Title" {
 		t.Fatalf("unexpected customs: %+v", s.CustomAlerts)
@@ -86,7 +86,7 @@ func TestLineCustomsLifecycle(t *testing.T) {
 	}
 	s, err = config.Load(dir)
 	if err != nil {
-		t.Fatalf("load failed: %v", err)
+		t.Fatalf(loadFailedFmt, err)
 	}
 	if s.CustomAlerts[0].Enabled {
 		t.Fatal("custom must be off after toggle")
@@ -96,7 +96,7 @@ func TestLineCustomsLifecycle(t *testing.T) {
 	}
 	s, err = config.Load(dir)
 	if err != nil {
-		t.Fatalf("load failed: %v", err)
+		t.Fatalf(loadFailedFmt, err)
 	}
 	if len(s.CustomAlerts) != 0 {
 		t.Fatalf("custom must be deleted, got %+v", s.CustomAlerts)
@@ -121,7 +121,7 @@ func TestAlertsShowsAndTogglesCustoms(t *testing.T) {
 	}
 	s, err := config.Load(dir)
 	if err != nil {
-		t.Fatalf("load failed: %v", err)
+		t.Fatalf(loadFailedFmt, err)
 	}
 	if s.CustomAlerts[0].Enabled {
 		t.Fatal("custom #5 must be off after toggle")

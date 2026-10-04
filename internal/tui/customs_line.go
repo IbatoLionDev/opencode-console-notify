@@ -76,37 +76,47 @@ func customIndex(s *config.Settings, arg string) int {
 func (t *session) runCustomsLine() string {
 	for {
 		fmt.Fprint(t.stdout, renderCustomsLine(&t.settings, t.lang))
-		line := readKey(t.reader)
-		switch {
-		case line == "q" || line == "esc" || line == "b" || line == "back" || line == "volver":
-			return "menu"
-		case line == "a":
-			if st := t.customsLineAdd(); st != "customs" {
-				return st
-			}
-		case line == "c":
-			fmt.Fprint(t.stdout, renderCatalogLine(t.lang))
-			readKey(t.reader)
-		case strings.HasPrefix(line, "e "):
-			if st := t.customsLineEdit(customIndex(&t.settings, strings.TrimPrefix(line, "e "))); st != "customs" {
-				return st
-			}
-		case strings.HasPrefix(line, "d "):
-			if st := t.customsLineDelete(customIndex(&t.settings, strings.TrimPrefix(line, "d "))); st != "customs" {
-				return st
-			}
-		default:
-			if idx := customIndex(&t.settings, line); idx >= 0 {
-				id := t.settings.CustomAlerts[idx].ID
-				if !config.ToggleCustom(&t.settings, id) {
-					return "customs"
-				}
-				if !t.persist() {
-					return "abort"
-				}
-			}
+		if next := t.dispatchCustomsLine(readKey(t.reader)); next != "customs" {
+			return next
 		}
 	}
+}
+
+// dispatchCustomsLine routes one panel command; "customs" means stay.
+func (t *session) dispatchCustomsLine(line string) string {
+	switch {
+	case isBackKey(line):
+		return "menu"
+	case line == "a":
+		return t.customsLineAdd()
+	case line == "c":
+		fmt.Fprint(t.stdout, renderCatalogLine(t.lang))
+		readKey(t.reader)
+		return "customs"
+	case strings.HasPrefix(line, "e "):
+		return t.customsLineEdit(customIndex(&t.settings, strings.TrimPrefix(line, "e ")))
+	case strings.HasPrefix(line, "d "):
+		return t.customsLineDelete(customIndex(&t.settings, strings.TrimPrefix(line, "d ")))
+	default:
+		return t.toggleCustomLine(line)
+	}
+}
+
+// toggleCustomLine flips the custom at a 1-based position; unknown input
+// stays on the panel, save failures abort.
+func (t *session) toggleCustomLine(line string) string {
+	idx := customIndex(&t.settings, line)
+	if idx < 0 {
+		return "customs"
+	}
+	id := t.settings.CustomAlerts[idx].ID
+	if !config.ToggleCustom(&t.settings, id) {
+		return "customs"
+	}
+	if !t.persist() {
+		return "abort"
+	}
+	return "customs"
 }
 
 // customsLinePickEvent prints the catalog and reads a 1-based number,

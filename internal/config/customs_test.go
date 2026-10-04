@@ -5,6 +5,12 @@ import (
 	"testing"
 )
 
+// Shared event fixtures so string literals are defined once.
+const (
+	testFileEditedEvent  = "file.edited"
+	testTodoUpdatedEvent = "todo.updated"
+)
+
 func TestMigrateV1KeepsBehavior(t *testing.T) {
 	dir := t.TempDir()
 	raw := `{"version":1,"lang":"es","alerts":{"sessionIdle":false,"sessionError":true,"permissionAsked":true,"questionAsked":true}}`
@@ -25,7 +31,7 @@ func TestMigrateV1KeepsBehavior(t *testing.T) {
 
 func TestCustomCRUD(t *testing.T) {
 	s := Defaults()
-	id, err := AddCustom(&s, "file.edited", " Edited ", "saved")
+	id, err := AddCustom(&s, testFileEditedEvent, " Edited ", "saved")
 	if err != nil {
 		t.Fatalf("add failed: %v", err)
 	}
@@ -35,7 +41,7 @@ func TestCustomCRUD(t *testing.T) {
 	if !s.CustomAlerts[0].Enabled {
 		t.Fatal("new customs must start enabled")
 	}
-	if ok, err := UpdateCustom(&s, id, "todo.updated", "Todos", ""); !ok || err != nil {
+	if ok, err := UpdateCustom(&s, id, testTodoUpdatedEvent, "Todos", ""); !ok || err != nil {
 		t.Fatalf("update failed: ok=%v err=%v", ok, err)
 	}
 	if !ToggleCustom(&s, id) || FindCustom(s, id).Enabled {
@@ -47,7 +53,7 @@ func TestCustomCRUD(t *testing.T) {
 	if RemoveCustom(&s, id) || ToggleCustom(&s, id) {
 		t.Fatal("missing ids must report false")
 	}
-	if ok, _ := UpdateCustom(&s, id, "todo.updated", "x", ""); ok {
+	if ok, _ := UpdateCustom(&s, id, testTodoUpdatedEvent, "x", ""); ok {
 		t.Fatal("update of missing id must report false")
 	}
 }
@@ -57,7 +63,7 @@ func TestCustomValidation(t *testing.T) {
 	if _, err := AddCustom(&s, "nope.missing", "T", ""); err == nil {
 		t.Fatal("unknown event must be rejected")
 	}
-	if _, err := AddCustom(&s, "file.edited", "   ", ""); err == nil {
+	if _, err := AddCustom(&s, testFileEditedEvent, "   ", ""); err == nil {
 		t.Fatal("empty title must be rejected")
 	}
 	if len(s.CustomAlerts) != 0 {
@@ -82,19 +88,19 @@ func TestInvalidCustomsFilteredOnLoad(t *testing.T) {
 
 func TestCustomsForEvent(t *testing.T) {
 	s := Defaults()
-	if _, err := AddCustom(&s, "file.edited", "A", ""); err != nil {
+	if _, err := AddCustom(&s, testFileEditedEvent, "A", ""); err != nil {
 		t.Fatal(err)
 	}
-	id2, err := AddCustom(&s, "file.edited", "B", "")
+	id2, err := AddCustom(&s, testFileEditedEvent, "B", "")
 	if err != nil {
 		t.Fatal(err)
 	}
 	ToggleCustom(&s, id2)
-	got := CustomsForEvent(s, "file.edited")
+	got := CustomsForEvent(s, testFileEditedEvent)
 	if len(got) != 1 || got[0].Title != "A" {
 		t.Fatalf("want only enabled customs in order, got %+v", got)
 	}
-	if len(CustomsForEvent(s, "todo.updated")) != 0 {
+	if len(CustomsForEvent(s, testTodoUpdatedEvent)) != 0 {
 		t.Fatal("other events must not match")
 	}
 }

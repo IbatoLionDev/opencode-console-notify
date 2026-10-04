@@ -5,8 +5,14 @@ import (
 	"testing"
 )
 
+// Shared fixtures so string literals are defined once.
+const (
+	testSessionIdleEvent = "session.idle"
+	testMissingEvent     = "nope.missing"
+)
+
 func TestCatalogHasDefaults(t *testing.T) {
-	for _, want := range []string{"session.idle", "session.error", "permission.asked", "question.asked"} {
+	for _, want := range []string{testSessionIdleEvent, "session.error", "permission.asked", "question.asked"} {
 		if !IsKnownEvent(want) {
 			t.Fatalf("catalog misses default event %q", want)
 		}
@@ -30,13 +36,13 @@ func TestCatalogHasNoDuplicates(t *testing.T) {
 }
 
 func TestEventDescription(t *testing.T) {
-	if got := EventDescription("session.idle", "es"); !strings.Contains(got, "esperando") {
+	if got := EventDescription(testSessionIdleEvent, "es"); !strings.Contains(got, "esperando") {
 		t.Fatalf("spanish description missing, got %q", got)
 	}
-	if got := EventDescription("session.idle", "fr"); got != EventDescription("session.idle", "en") {
+	if got := EventDescription(testSessionIdleEvent, "fr"); got != EventDescription(testSessionIdleEvent, "en") {
 		t.Fatalf("unknown lang must fall back to english, got %q", got)
 	}
-	if got := EventDescription("nope.missing", "en"); got != "nope.missing" {
+	if got := EventDescription(testMissingEvent, "en"); got != testMissingEvent {
 		t.Fatalf("unknown event must echo, got %q", got)
 	}
 }
@@ -47,7 +53,7 @@ func TestNoisySubset(t *testing.T) {
 			t.Fatalf("event %q must be flagged noisy", want)
 		}
 	}
-	if IsNoisyEvent("session.idle") || IsNoisyEvent("nope.missing") {
+	if IsNoisyEvent(testSessionIdleEvent) || IsNoisyEvent(testMissingEvent) {
 		t.Fatal("quiet and unknown events must not be noisy")
 	}
 }
