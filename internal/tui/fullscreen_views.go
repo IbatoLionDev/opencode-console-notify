@@ -15,6 +15,7 @@ func menuScreenItems(lang string) []screen.Item {
 		{Label: i18n.T(lang, "menu.update")},
 		{Label: i18n.T(lang, "menu.info")},
 		{Label: i18n.T(lang, "menu.alerts")},
+		{Label: i18n.T(lang, "menu.customs")},
 		{Label: i18n.T(lang, "menu.exit")},
 	}
 }
@@ -29,6 +30,8 @@ func menuTarget(sel int) string {
 		return "info"
 	case 3:
 		return "alerts"
+	case 4:
+		return "customs"
 	}
 	return "exit"
 }
@@ -43,7 +46,9 @@ func menuShortcut(r rune) string {
 		return "info"
 	case '4', 'a', 'A':
 		return "alerts"
-	case '5':
+	case '5', 'c', 'C':
+		return "customs"
+	case '6':
 		return "exit"
 	}
 	return ""

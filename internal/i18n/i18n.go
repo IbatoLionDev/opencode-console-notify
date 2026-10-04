@@ -22,6 +22,7 @@ var en = map[string]string{
 	"menu.update":             "Update",
 	"menu.info":               "Info",
 	"menu.alerts":             "Alerts",
+	"menu.customs":            "Customs",
 	"menu.exit":               "Exit",
 	"footer.menu":             "Up/Down navigate | Enter open | Q/Esc exit",
 	"footer.back":             "Esc/Q back",
@@ -43,6 +44,16 @@ var en = map[string]string{
 	"toast.question":          "OpenCode asked you a question",
 	"state.on":                "on",
 	"state.off":               "off",
+	"custom.tag":              "custom",
+	"customs.title":           "Custom notifications",
+	"customs.empty":           "No customs yet — press A to add one",
+	"customs.footer":          "Up/Down navigate | Space toggle | A add E edit D delete C catalog | Q back",
+	"customs.pickEvent":       "Pick an event by number",
+	"customs.titleLabel":      "Title",
+	"customs.bodyLabel":       "Body",
+	"customs.confirmDelete":   "Delete \"%s\"? (y/n): ",
+	"customs.catalogTitle":    "Subscribable events (! = noisy)",
+	"customs.optional":        "empty = none",
 }
 
 var es = map[string]string{
@@ -51,6 +62,7 @@ var es = map[string]string{
 	"menu.update":             "Actualizar",
 	"menu.info":               "Info",
 	"menu.alerts":             "Alertas",
+	"menu.customs":            "Custom",
 	"menu.exit":               "Salir",
 	"footer.menu":             "Arriba/Abajo navegar | Enter abrir | Q/Esc salir",
 	"footer.back":             "Esc/Q volver",
@@ -72,6 +84,16 @@ var es = map[string]string{
 	"toast.question":          "OpenCode te hizo una pregunta",
 	"state.on":                "activada",
 	"state.off":               "desactivada",
+	"custom.tag":              "custom",
+	"customs.title":           "Notificaciones custom",
+	"customs.empty":           "Aún no hay customs — pulsa A para crear una",
+	"customs.footer":          "Arriba/Abajo navegar | Espacio activar/desactivar | A añadir E editar D eliminar C catálogo | Q volver",
+	"customs.pickEvent":       "Elige un evento por número",
+	"customs.titleLabel":      "Título",
+	"customs.bodyLabel":       "Texto",
+	"customs.confirmDelete":   "¿Eliminar \"%s\"? (s/n): ",
+	"customs.catalogTitle":    "Eventos disponibles (! = ruidoso)",
+	"customs.optional":        "vacío = ninguno",
 }
 
 // T returns the string for key in lang, falling back to English and

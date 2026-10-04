@@ -76,6 +76,7 @@ func (l *screenLoop) doUpdate(restore func()) int {
 func (l *screenLoop) loop(restore func()) int {
 	menuSel := 0
 	alertSel := 0
+	customsSel := 0
 	view := "menu"
 	for {
 		switch view {
@@ -83,6 +84,8 @@ func (l *screenLoop) loop(restore func()) int {
 			view = l.runMenu(&menuSel)
 		case "alerts":
 			view = l.runAlerts(&alertSel)
+		case "customs":
+			view = l.runCustoms(&customsSel)
 		case "language":
 			view = l.runLanguage()
 		case "info":

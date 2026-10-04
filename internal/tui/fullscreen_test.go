@@ -104,10 +104,46 @@ func TestFullscreenUpdateDelegates(t *testing.T) {
 }
 
 func TestMenuTarget(t *testing.T) {
-	for sel, want := range map[int]string{0: "language", 1: "update", 2: "info", 3: "alerts", 4: "exit"} {
+	for sel, want := range map[int]string{0: "language", 1: "update", 2: "info", 3: "alerts", 4: "customs", 5: "exit"} {
 		if got := menuTarget(sel); got != want {
 			t.Fatalf("menuTarget(%d) = %q, want %q", sel, got, want)
 		}
+	}
+}
+
+func TestFullscreenCustomCreateToggle(t *testing.T) {
+	dir := t.TempDir()
+	// Menu 5 customs, A add, Enter picks first event, Hi + empty body, Space toggles off, back, exit.
+	l, _ := newTestLoop(dir, "en", "5a\rHi\r\r qq")
+	if code := l.loop(noopRestore); code != 0 {
+		t.Fatalf("exit code = %d, want 0", code)
+	}
+	s, err := config.Load(dir)
+	if err != nil {
+		t.Fatalf("load failed: %v", err)
+	}
+	if len(s.CustomAlerts) != 1 {
+		t.Fatalf("want 1 custom, got %+v", s.CustomAlerts)
+	}
+	c := s.CustomAlerts[0]
+	if c.ID != "custom-1" || c.Event != "session.created" || c.Title != "Hi" || c.Enabled {
+		t.Fatalf("unexpected custom state: %+v", c)
+	}
+}
+
+func TestFullscreenCustomDelete(t *testing.T) {
+	dir := t.TempDir()
+	// Create, then D delete with y confirm, back, exit.
+	l, _ := newTestLoop(dir, "en", "5a\rHi\r\rd"+"y\r"+"qq")
+	if code := l.loop(noopRestore); code != 0 {
+		t.Fatalf("exit code = %d, want 0", code)
+	}
+	s, err := config.Load(dir)
+	if err != nil {
+		t.Fatalf("load failed: %v", err)
+	}
+	if len(s.CustomAlerts) != 0 {
+		t.Fatalf("custom must be deleted, got %+v", s.CustomAlerts)
 	}
 }
 
