@@ -128,10 +128,10 @@ opencode-notify.exe config
 # or: opencode-console-notify config
 ```
 
-Opens an interactive TUI (English/Spanish) with language, update, info, and
-alerts. On a real console it renders fullscreen with keyboard navigation
-(j/k/arrows, Enter, Space); on pipes and scripts the line mode runs
-instead. Language applies to the TUI and the default notification texts.
+Opens an interactive TUI (English/Spanish) with language, update, info,
+alerts, and customs. On a real console it renders fullscreen with keyboard
+navigation (j/k/arrows, Enter, Space); on pipes and scripts the line mode
+runs instead. Language applies to the TUI and the default notification texts.
 Alerts lists the four default events with their triggers; Space toggles each
 one and the plugin honors it on the next event. Every view prints its keys
 in a visible footer. For scripts:
@@ -140,8 +140,16 @@ in a visible footer. For scripts:
 opencode-console-notify config --lang es
 opencode-console-notify config --toggle sessionIdle=off
 opencode-console-notify config --list-alerts
+opencode-console-notify config --list-events
+opencode-console-notify config --list-customs
 opencode-console-notify config --info
 ```
+
+Custom notifications bind your own title and body to any of the 48
+subscribable OpenCode events (see `config --list-events`; noisy families
+are flagged). Manage them in the TUI customs panel (list, create, edit,
+delete, toggle) — they show in alerts tagged as custom and toggle like the
+defaults, and the plugin fires them with the same child-session rule.
 
 Settings persist in `console-notify.config.json` next to the plugin file;
 without it everything stays as in v1 (all alerts on, English).

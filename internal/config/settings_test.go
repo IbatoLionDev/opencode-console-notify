@@ -3,16 +3,23 @@ package config
 import (
 	"os"
 	"path/filepath"
+	"reflect"
 	"testing"
 )
 
-func TestDefaultsAreV1Compatible(t *testing.T) {
+func TestDefaultsAreV1Behavior(t *testing.T) {
 	s := Defaults()
+	if s.Version != SettingsVersion {
+		t.Fatalf("default version = %d, want %d", s.Version, SettingsVersion)
+	}
 	if s.Lang != "en" {
 		t.Fatalf("default lang = %q, want %q", s.Lang, "en")
 	}
 	if !s.Alerts.SessionIdle || !s.Alerts.SessionError || !s.Alerts.PermissionAsked || !s.Alerts.QuestionAsked {
 		t.Fatalf("defaults must enable every alert, got %+v", s.Alerts)
+	}
+	if len(s.CustomAlerts) != 0 {
+		t.Fatalf("defaults must carry no customs, got %+v", s.CustomAlerts)
 	}
 	if got := SettingsPath(`C:\temp\ocn\plugins`); got != filepath.Join(`C:\temp\ocn\plugins`, SettingsFileName) {
 		t.Fatalf("settings path = %q", got)
@@ -25,7 +32,7 @@ func TestLoadMissingFileReturnsDefaults(t *testing.T) {
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
-	if s != Defaults() {
+	if !reflect.DeepEqual(s, Defaults()) {
 		t.Fatalf("got %+v, want defaults %+v", s, Defaults())
 	}
 }
@@ -43,7 +50,7 @@ func TestSaveRoundTrip(t *testing.T) {
 		t.Fatalf("load failed: %v", err)
 	}
 	want = Normalize(want)
-	if got != want {
+	if !reflect.DeepEqual(got, want) {
 		t.Fatalf("got %+v, want %+v", got, want)
 	}
 }

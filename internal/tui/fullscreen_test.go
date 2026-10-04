@@ -10,6 +10,12 @@ import (
 	"github.com/IbatoLionDev/opencode-console-notify/internal/config"
 )
 
+// Shared failure formats so literals are defined once.
+const (
+	exitCodeFormat = "exit code = %d, want 0"
+	loadFailedFmt  = "load failed: %v"
+)
+
 func newTestLoop(dir, lang, input string) (*screenLoop, *bytes.Buffer) {
 	var out bytes.Buffer
 	l := &screenLoop{
@@ -24,10 +30,6 @@ func newTestLoop(dir, lang, input string) (*screenLoop, *bytes.Buffer) {
 	l.settings.Lang = lang
 	return l, &out
 }
-
-// exitCodeFormat reports a loop exit mismatch; one constant for every
-// scripted-loop test below.
-const exitCodeFormat = "exit code = %d, want 0"
 
 // noopRestore stands in for the console restore func: scripted loops never
 // touch the real console, so there is nothing to restore.
@@ -54,7 +56,7 @@ func TestFullscreenTogglePersists(t *testing.T) {
 	}
 	s, err := config.Load(dir)
 	if err != nil {
-		t.Fatalf("load failed: %v", err)
+		t.Fatalf(loadFailedFmt, err)
 	}
 	if s.Alerts.SessionIdle {
 		t.Fatal("space must toggle sessionIdle off and persist it")
@@ -69,7 +71,7 @@ func TestFullscreenLanguagePersists(t *testing.T) {
 	}
 	s, err := config.Load(dir)
 	if err != nil {
-		t.Fatalf("load failed: %v", err)
+		t.Fatalf(loadFailedFmt, err)
 	}
 	if s.Lang != "es" {
 		t.Fatalf("lang = %q, want es", s.Lang)
@@ -104,10 +106,46 @@ func TestFullscreenUpdateDelegates(t *testing.T) {
 }
 
 func TestMenuTarget(t *testing.T) {
-	for sel, want := range map[int]string{0: "language", 1: "update", 2: "info", 3: "alerts", 4: "exit"} {
+	for sel, want := range map[int]string{0: "language", 1: "update", 2: "info", 3: "alerts", 4: "customs", 5: "exit"} {
 		if got := menuTarget(sel); got != want {
 			t.Fatalf("menuTarget(%d) = %q, want %q", sel, got, want)
 		}
+	}
+}
+
+func TestFullscreenCustomCreateToggle(t *testing.T) {
+	dir := t.TempDir()
+	// Menu 5 customs, A add, Enter picks first event, Hi + empty body, Space toggles off, back, exit.
+	l, _ := newTestLoop(dir, "en", "5a\rHi\r\r qq")
+	if code := l.loop(noopRestore); code != 0 {
+		t.Fatalf(exitCodeFormat, code)
+	}
+	s, err := config.Load(dir)
+	if err != nil {
+		t.Fatalf(loadFailedFmt, err)
+	}
+	if len(s.CustomAlerts) != 1 {
+		t.Fatalf("want 1 custom, got %+v", s.CustomAlerts)
+	}
+	c := s.CustomAlerts[0]
+	if c.ID != "custom-1" || c.Event != "session.created" || c.Title != "Hi" || c.Enabled {
+		t.Fatalf("unexpected custom state: %+v", c)
+	}
+}
+
+func TestFullscreenCustomDelete(t *testing.T) {
+	dir := t.TempDir()
+	// Create, then D delete with y confirm, back, exit.
+	l, _ := newTestLoop(dir, "en", "5a\rHi\r\rd"+"y\r"+"qq")
+	if code := l.loop(noopRestore); code != 0 {
+		t.Fatalf(exitCodeFormat, code)
+	}
+	s, err := config.Load(dir)
+	if err != nil {
+		t.Fatalf(loadFailedFmt, err)
+	}
+	if len(s.CustomAlerts) != 0 {
+		t.Fatalf("custom must be deleted, got %+v", s.CustomAlerts)
 	}
 }
 

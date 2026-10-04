@@ -3,6 +3,18 @@
 All notable changes to this project are documented here, newest first.
 Version headers link to the GitHub release when one exists.
 
+## [2.2.0] - 2026-10-04
+
+### Added
+
+- Custom notifications: create your own toasts from the config TUI by
+  picking one of 48 subscribable OpenCode events and writing the text. New
+  customs panel with list, create, edit, delete, toggle and a read-only
+  events catalog (noisy families flagged); customs appear in alerts tagged
+  as custom and toggle like defaults; the plugin fires them with the same
+  child-session rule. Script flags: `--list-events`, `--list-customs`.
+  Zero new dependencies.
+
 ## [2.1.2] - 2026-10-04
 
 ### Fixed

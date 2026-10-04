@@ -9,10 +9,10 @@ import (
 	"github.com/IbatoLionDev/opencode-console-notify/internal/screen"
 )
 
-// alertScreenItems maps the shared AlertItems domain over screen rows so
-// the four alerts are defined once (tui_renders.go owns the mapping).
+// alertScreenItems maps all alerts (defaults plus customs tagged as
+// custom) over screen rows. The shared mapping lives in tui_renders.go.
 func alertScreenItems(s *config.Settings, lang string) []screen.Item {
-	fields := AlertItems(s, lang)
+	fields := AllAlertItems(s, lang)
 	items := make([]screen.Item, 0, len(fields))
 	for _, f := range fields {
 		items = append(items, screen.Item{
@@ -31,20 +31,12 @@ func boolStateKey(on bool) string {
 	return "state.off"
 }
 
-func alertSetting(s *config.Settings, idx int) *bool {
-	switch idx {
-	case 0:
-		return &s.Alerts.SessionIdle
-	case 1:
-		return &s.Alerts.SessionError
-	case 2:
-		return &s.Alerts.PermissionAsked
-	}
-	return &s.Alerts.QuestionAsked
-}
-
 func (l *screenLoop) toggleAlert(idx int) bool {
-	*alertSetting(&l.settings, idx) = !*alertSetting(&l.settings, idx)
+	items := AllAlertItems(&l.settings, l.lang)
+	if idx < 0 || idx >= len(items) {
+		return true
+	}
+	*items[idx].SettingPtr = !*items[idx].SettingPtr
 	return l.persistSettings()
 }
 

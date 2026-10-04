@@ -27,16 +27,17 @@ const COOLDOWN_MS = 4000
 const MAX_LINE = 160
 const DEBUG_LOG = join(process.env.TEMP || process.env.TMP || ".", "opencode-console-notify.debug.log")
 
-// Config file written by the config command (v2.0.0). Missing or corrupt
-// means v1 behavior: everything on, English.
+// Config file written by the config command (v2.0.0, customs since 2.2).
+// Missing or corrupt means v1 behavior: everything on, English.
 function loadPluginSettings() {
-  const fallback = { lang: "en", alerts: { sessionIdle: true, sessionError: true, permissionAsked: true, questionAsked: true } }
+  const fallback = { lang: "en", alerts: { sessionIdle: true, sessionError: true, permissionAsked: true, questionAsked: true }, customs: [] }
   try {
     const home = homedir()
     if (!home) return fallback
     const raw = readFileSync(join(home, ".config", "opencode", "plugins", "console-notify.config.json"), "utf8")
     const parsed = JSON.parse(raw)
     const alerts = parsed?.alerts ?? {}
+    const customs = Array.isArray(parsed?.customAlerts) ? parsed.customAlerts : []
     return {
       lang: parsed?.lang === "es" ? "es" : "en",
       alerts: {
@@ -45,6 +46,15 @@ function loadPluginSettings() {
         permissionAsked: alerts.permissionAsked !== false,
         questionAsked: alerts.questionAsked !== false,
       },
+      // Keep only entries that can fire; one bad entry must never break
+      // the file (same rule as the CLI normalizer).
+      customs: customs.filter((c) => c && typeof c.id === "string" && typeof c.event === "string" && typeof c.title === "string" && c.title.trim() !== "").map((c) => ({
+        id: c.id,
+        event: c.event,
+        title: String(c.title),
+        body: typeof c.body === "string" ? c.body : "",
+        enabled: c.enabled !== false,
+      })),
     }
   } catch {
     return fallback
@@ -242,14 +252,41 @@ export default async ({ client, $, directory }) => {
     ])
   }
 
+  // Customs fire after the defaults: enabled entries bound to this
+  // event type, with the same child-session rule (idle/error filtered,
+  // everything else always notifies). One tag per custom id so same-kind
+  // toasts replace each other; the shared cooldown still applies.
+  const handleCustoms = async (type, p) => {
+    const settings = loadPluginSettings()
+    for (const c of settings.customs) {
+      if (!c.enabled || c.event !== type) continue
+      if ((type === "session.idle" || type === "session.error") && await isChild(p.sessionID)) continue
+      const lines = c.body ? [c.title, truncate(c.body)] : [c.title]
+      notify(`custom:${c.id}`, lines)
+    }
+  }
+
   return {
     event: async ({ event }) => {
       try {
         const p = event.properties ?? {}
-        if (event.type === "session.idle") return handleIdle(p)
-        if (event.type === "session.error") return handleError(p)
-        if (event.type === "permission.asked") return handlePermission(p)
-        if (event.type === "question.asked") return handleQuestion(p)
+        if (event.type === "session.idle") {
+          await handleIdle(p)
+          return handleCustoms(event.type, p)
+        }
+        if (event.type === "session.error") {
+          await handleError(p)
+          return handleCustoms(event.type, p)
+        }
+        if (event.type === "permission.asked") {
+          handlePermission(p)
+          return handleCustoms(event.type, p)
+        }
+        if (event.type === "question.asked") {
+          handleQuestion(p)
+          return handleCustoms(event.type, p)
+        }
+        return handleCustoms(event.type, p)
       } catch (err) {
         // Notifications must never break the event pipeline.
         dbg(`EVENT handler error type=${event?.type} err=${String(err?.message ?? err)}`)
