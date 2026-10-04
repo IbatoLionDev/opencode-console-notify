@@ -10,6 +10,12 @@ import (
 	"github.com/IbatoLionDev/opencode-console-notify/internal/config"
 )
 
+// Shared failure formats so literals are defined once.
+const (
+	exitCodeFormat = "exit code = %d, want 0"
+	loadFailedFmt  = "load failed: %v"
+)
+
 func newTestLoop(dir, lang, input string) (*screenLoop, *bytes.Buffer) {
 	var out bytes.Buffer
 	l := &screenLoop{
@@ -24,10 +30,6 @@ func newTestLoop(dir, lang, input string) (*screenLoop, *bytes.Buffer) {
 	l.settings.Lang = lang
 	return l, &out
 }
-
-// exitCodeFormat reports a loop exit mismatch; one constant for every
-// scripted-loop test below.
-const exitCodeFormat = "exit code = %d, want 0"
 
 // noopRestore stands in for the console restore func: scripted loops never
 // touch the real console, so there is nothing to restore.
@@ -54,7 +56,7 @@ func TestFullscreenTogglePersists(t *testing.T) {
 	}
 	s, err := config.Load(dir)
 	if err != nil {
-		t.Fatalf("load failed: %v", err)
+		t.Fatalf(loadFailedFmt, err)
 	}
 	if s.Alerts.SessionIdle {
 		t.Fatal("space must toggle sessionIdle off and persist it")
@@ -69,7 +71,7 @@ func TestFullscreenLanguagePersists(t *testing.T) {
 	}
 	s, err := config.Load(dir)
 	if err != nil {
-		t.Fatalf("load failed: %v", err)
+		t.Fatalf(loadFailedFmt, err)
 	}
 	if s.Lang != "es" {
 		t.Fatalf("lang = %q, want es", s.Lang)
@@ -116,11 +118,11 @@ func TestFullscreenCustomCreateToggle(t *testing.T) {
 	// Menu 5 customs, A add, Enter picks first event, Hi + empty body, Space toggles off, back, exit.
 	l, _ := newTestLoop(dir, "en", "5a\rHi\r\r qq")
 	if code := l.loop(noopRestore); code != 0 {
-		t.Fatalf("exit code = %d, want 0", code)
+		t.Fatalf(exitCodeFormat, code)
 	}
 	s, err := config.Load(dir)
 	if err != nil {
-		t.Fatalf("load failed: %v", err)
+		t.Fatalf(loadFailedFmt, err)
 	}
 	if len(s.CustomAlerts) != 1 {
 		t.Fatalf("want 1 custom, got %+v", s.CustomAlerts)
@@ -136,11 +138,11 @@ func TestFullscreenCustomDelete(t *testing.T) {
 	// Create, then D delete with y confirm, back, exit.
 	l, _ := newTestLoop(dir, "en", "5a\rHi\r\rd"+"y\r"+"qq")
 	if code := l.loop(noopRestore); code != 0 {
-		t.Fatalf("exit code = %d, want 0", code)
+		t.Fatalf(exitCodeFormat, code)
 	}
 	s, err := config.Load(dir)
 	if err != nil {
-		t.Fatalf("load failed: %v", err)
+		t.Fatalf(loadFailedFmt, err)
 	}
 	if len(s.CustomAlerts) != 0 {
 		t.Fatalf("custom must be deleted, got %+v", s.CustomAlerts)
