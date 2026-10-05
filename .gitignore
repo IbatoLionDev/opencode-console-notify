@@ -33,6 +33,7 @@ bin/*
 
 # --- Dev-run sandbox (npm run dev, never published, never committed) ---
 .dev-sandbox/
+pnpm-lock.yaml
 
 # --- OS / editor noise ---
 .DS_Store
