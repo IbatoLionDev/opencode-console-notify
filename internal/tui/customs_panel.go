@@ -104,7 +104,7 @@ func (l *screenLoop) customsDelete(sel int) string {
 		return "customs"
 	}
 	title := l.settings.CustomAlerts[sel].Title
-	answer, ok := l.readLineInput(fmt.Sprintf(i18n.T(l.lang, "customs.confirmDelete"), title))
+	answer, ok := l.readLineInput(i18n.T(l.lang, "customs.title"), fmt.Sprintf(i18n.T(l.lang, "customs.confirmDelete"), title))
 	if !ok {
 		return "customs"
 	}

@@ -54,6 +54,7 @@ var en = map[string]string{
 	"customs.confirmDelete":   "Delete \"%s\"? (y/n): ",
 	"customs.catalogTitle":    "Subscribable events (! = noisy)",
 	"customs.optional":        "empty = none",
+	"customs.inputFooter":     "Type + Enter confirms | Esc cancels",
 	"customs.lineFooter":      "Number toggles | A add E <n> edit D <n> delete C catalog | Q back",
 }
 
@@ -95,6 +96,7 @@ var es = map[string]string{
 	"customs.confirmDelete":   "¿Eliminar \"%s\"? (s/n): ",
 	"customs.catalogTitle":    "Eventos disponibles (! = ruidoso)",
 	"customs.optional":        "vacío = ninguno",
+	"customs.inputFooter":     "Escribe + Enter confirma | Esc cancela",
 	"customs.lineFooter":      "Número activa/desactiva | A añadir E <n> editar D <n> eliminar C catálogo | Q volver",
 }
 

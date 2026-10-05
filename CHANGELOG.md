@@ -3,6 +3,18 @@
 All notable changes to this project are documented here, newest first.
 Version headers link to the GitHub release when one exists.
 
+## [2.2.1] - 2026-10-04
+
+### Fixed
+
+- Fullscreen text input types every letter: shortcut letters (q/j/k/h)
+  and space were translated to control keys before reaching the input
+  buffer. The key parser now preserves the raw char; navigation outside
+  input is unchanged.
+- Added `npm run dev` / `dev:go`: run the repo copy against an isolated
+  `.dev-sandbox/` (bare command opens config); never touches the real
+  install.
+
 ## [2.2.0] - 2026-10-04
 
 ### Added

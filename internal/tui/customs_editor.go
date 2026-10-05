@@ -47,32 +47,44 @@ func (l *screenLoop) readRune() (rune, bool) {
 	return utf8.RuneError, true
 }
 
-// readLineInput prompts for one line with echo and backspace. Enter
-// submits (trimmed), Esc aborts (ok=false).
-func (l *screenLoop) readLineInput(prompt string) (string, bool) {
-	fmt.Fprint(l.out, prompt)
+// promptFrame renders the text prompt as a frame so input never leaves
+// the alternate screen; every keystroke redraws with the buffer.
+func (l *screenLoop) promptFrame(title, prompt string, buf []rune) {
+	frame := screen.Frame{
+		Title:    title,
+		Items:    []screen.Item{{Label: prompt + string(buf)}},
+		Selected: 0,
+		Footer:   i18n.T(l.lang, "customs.inputFooter"),
+		Height:   screen.FrameHeight(l.height),
+	}
+	fmt.Fprint(l.out, screen.Render(frame, l.width))
+}
+
+// readLineInput reads one line inside a prompt frame with echo and
+// backspace. Enter submits (trimmed), Esc aborts (ok=false). The cursor
+// shows while typing and hides again on return.
+func (l *screenLoop) readLineInput(frameTitle, prompt string) (string, bool) {
+	fmt.Fprint(l.out, screen.ShowCursor)
+	defer fmt.Fprint(l.out, screen.HideCursor)
 	var runes []rune
 	for {
+		l.promptFrame(frameTitle, prompt, runes)
 		r, ok := l.readRune()
 		if !ok {
 			return "", false
 		}
 		switch r {
 		case '\r', '\n':
-			fmt.Fprint(l.out, "\r\n")
 			return strings.TrimSpace(string(runes)), true
 		case 0x1b:
-			fmt.Fprint(l.out, "\r\n")
 			return "", false
 		case 0x7f, '\b':
 			if len(runes) > 0 {
 				runes = runes[:len(runes)-1]
-				fmt.Fprint(l.out, "\b \b")
 			}
 		default:
 			if r >= 0x20 {
 				runes = append(runes, r)
-				fmt.Fprint(l.out, string(r))
 			}
 		}
 	}
@@ -141,11 +153,11 @@ func (l *screenLoop) customsAdd() string {
 	if idx < 0 {
 		return "customs"
 	}
-	title, ok := l.readLineInput(i18n.T(l.lang, "customs.titleLabel") + ": ")
+	title, ok := l.readLineInput(i18n.T(l.lang, "customs.title"), i18n.T(l.lang, "customs.titleLabel")+": ")
 	if !ok || strings.TrimSpace(title) == "" {
 		return "customs"
 	}
-	body, ok := l.readLineInput(i18n.T(l.lang, "customs.bodyLabel") + " (" + i18n.T(l.lang, "customs.optional") + "): ")
+	body, ok := l.readLineInput(i18n.T(l.lang, "customs.title"), i18n.T(l.lang, "customs.bodyLabel")+" ("+i18n.T(l.lang, "customs.optional")+"): ")
 	if !ok {
 		return "customs"
 	}
@@ -166,14 +178,14 @@ func (l *screenLoop) customsEdit(sel int) string {
 		return "customs"
 	}
 	current := l.settings.CustomAlerts[sel]
-	title, ok := l.readLineInput(i18n.T(l.lang, "customs.titleLabel") + " [" + current.Title + "]: ")
+	title, ok := l.readLineInput(i18n.T(l.lang, "customs.title"), i18n.T(l.lang, "customs.titleLabel")+" ["+current.Title+"]: ")
 	if !ok {
 		return "customs"
 	}
 	if strings.TrimSpace(title) == "" {
 		title = current.Title
 	}
-	body, ok := l.readLineInput(i18n.T(l.lang, "customs.bodyLabel") + " [" + current.Body + "]: ")
+	body, ok := l.readLineInput(i18n.T(l.lang, "customs.title"), i18n.T(l.lang, "customs.bodyLabel")+" ["+current.Body+"]: ")
 	if !ok {
 		return "customs"
 	}
