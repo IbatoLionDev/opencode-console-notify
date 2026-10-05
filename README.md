@@ -1,5 +1,7 @@
 # opencode-console-notify
 
+![opencode-console-notify banner](public/opencode-console-notify-banner.png)
+
 Native Windows toast notifications for OpenCode — know when the agent finishes, errors, or needs you, without watching the terminal.
 
 ## What it notifies
