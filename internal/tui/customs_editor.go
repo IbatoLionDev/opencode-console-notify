@@ -12,6 +12,10 @@ import (
 	"github.com/IbatoLionDev/opencode-console-notify/internal/screen"
 )
 
+// customsTitleKey is the frame title for every custom prompt so the key
+// stays in one place instead of repeated across add/edit flows.
+const customsTitleKey = "customs.title"
+
 // readByte returns one input byte, draining buffered key bytes first so
 // text input never loses bytes to a previous split escape sequence.
 func (l *screenLoop) readByte() (byte, bool) {
@@ -58,13 +62,21 @@ func (l *screenLoop) promptFrame(title, prompt string, buf []rune) {
 		Height:   screen.FrameHeight(l.height),
 	}
 	fmt.Fprint(l.out, screen.Render(frame, l.width))
+	// Render ends with footer + trailing newline, so reposition the
+	// hardware cursor inside the input row after prompt+typed buffer.
+	col := screen.InputCursorCol(prompt, len(buf), l.width)
+	fmt.Fprint(l.out, screen.MoveCursor(screen.InputRow, col))
+	// Drawn white block marks the insertion point; the hardware cursor
+	// stays hidden (EnterFrame hides, LeaveFrame restores).
+	fmt.Fprint(l.out, screen.CursorBlock())
 }
 
 // readLineInput reads one line inside a prompt frame with echo and
-// backspace. Enter submits (trimmed), Esc aborts (ok=false). The cursor
-// shows while typing and hides again on return.
+// backspace. Enter submits (trimmed), Esc aborts (ok=false). The drawn
+// white block marks the insertion point while typing; the hardware
+// cursor stays hidden (HideCursor defer is safety — EnterFrame already
+// hides, LeaveFrame restores).
 func (l *screenLoop) readLineInput(frameTitle, prompt string) (string, bool) {
-	fmt.Fprint(l.out, screen.ShowCursor)
 	defer fmt.Fprint(l.out, screen.HideCursor)
 	var runes []rune
 	for {
@@ -153,11 +165,11 @@ func (l *screenLoop) customsAdd() string {
 	if idx < 0 {
 		return "customs"
 	}
-	title, ok := l.readLineInput(i18n.T(l.lang, "customs.title"), i18n.T(l.lang, "customs.titleLabel")+": ")
+	title, ok := l.readLineInput(i18n.T(l.lang, customsTitleKey), i18n.T(l.lang, "customs.titleLabel")+": ")
 	if !ok || strings.TrimSpace(title) == "" {
 		return "customs"
 	}
-	body, ok := l.readLineInput(i18n.T(l.lang, "customs.title"), i18n.T(l.lang, "customs.bodyLabel")+" ("+i18n.T(l.lang, "customs.optional")+"): ")
+	body, ok := l.readLineInput(i18n.T(l.lang, customsTitleKey), i18n.T(l.lang, "customs.bodyLabel")+" ("+i18n.T(l.lang, "customs.optional")+"): ")
 	if !ok {
 		return "customs"
 	}
@@ -178,14 +190,14 @@ func (l *screenLoop) customsEdit(sel int) string {
 		return "customs"
 	}
 	current := l.settings.CustomAlerts[sel]
-	title, ok := l.readLineInput(i18n.T(l.lang, "customs.title"), i18n.T(l.lang, "customs.titleLabel")+" ["+current.Title+"]: ")
+	title, ok := l.readLineInput(i18n.T(l.lang, customsTitleKey), i18n.T(l.lang, "customs.titleLabel")+" ["+current.Title+"]: ")
 	if !ok {
 		return "customs"
 	}
 	if strings.TrimSpace(title) == "" {
 		title = current.Title
 	}
-	body, ok := l.readLineInput(i18n.T(l.lang, "customs.title"), i18n.T(l.lang, "customs.bodyLabel")+" ["+current.Body+"]: ")
+	body, ok := l.readLineInput(i18n.T(l.lang, customsTitleKey), i18n.T(l.lang, "customs.bodyLabel")+" ["+current.Body+"]: ")
 	if !ok {
 		return "customs"
 	}

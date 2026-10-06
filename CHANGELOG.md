@@ -3,6 +3,18 @@
 All notable changes to this project are documented here, newest first.
 Version headers link to the GitHub release when one exists.
 
+## [2.2.2] - 2026-10-06
+
+### Fixed
+
+- Custom-notifications text input now keeps the cursor inside the TUI
+  input row: a white block tracks the typed text in both runtimes (Go and
+  Node fullscreen) while the hardware cursor stays hidden while typing.
+  The JS prompt frame points at row 5 (its render emits two leading
+  escape-only lines); Go stays on row 3.
+- Go fullscreen no longer renders as a staircase: newline auto-return
+  stays on, so Go mirrors the Node rendering byte for byte on newlines.
+
 ## [2.2.1] - 2026-10-04
 
 ### Fixed

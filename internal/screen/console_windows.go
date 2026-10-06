@@ -18,7 +18,6 @@ const (
 	enableWindowInput    = 0x0008
 	enableVTInput        = 0x0200
 	enableVTProcessing   = 0x0004
-	disableAutoReturn    = 0x0008
 )
 
 // kernel32 console procs used directly because stdlib syscall only exposes
@@ -82,7 +81,11 @@ func Enable() (restore func(), err error) {
 	if err := setMode(os.Stdin, in); err != nil {
 		return nil, err
 	}
-	out := outModes | enableVTProcessing | disableAutoReturn
+	// Keep newline auto-return ON (never set DISABLE_NEWLINE_AUTO_RETURN):
+	// Render terminates rows with bare \n exactly like the Node stack, so
+	// \n must move to column 0 of the next row. Disabling auto-return
+	// produces the staircase effect (every row starts further right).
+	out := outModes | enableVTProcessing
 	if err := setMode(os.Stdout, out); err != nil {
 		setMode(os.Stdin, inModes)
 		return nil, err
