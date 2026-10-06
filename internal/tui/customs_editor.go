@@ -12,6 +12,10 @@ import (
 	"github.com/IbatoLionDev/opencode-console-notify/internal/screen"
 )
 
+// customsTitleKey is the frame title for every custom prompt so the key
+// stays in one place instead of repeated across add/edit flows.
+const customsTitleKey = "customs.title"
+
 // readByte returns one input byte, draining buffered key bytes first so
 // text input never loses bytes to a previous split escape sequence.
 func (l *screenLoop) readByte() (byte, bool) {
@@ -58,6 +62,10 @@ func (l *screenLoop) promptFrame(title, prompt string, buf []rune) {
 		Height:   screen.FrameHeight(l.height),
 	}
 	fmt.Fprint(l.out, screen.Render(frame, l.width))
+	// Render ends with footer + trailing newline, so reposition the
+	// hardware cursor inside the input row after prompt+typed buffer.
+	col := screen.InputCursorCol(prompt, len(buf), l.width)
+	fmt.Fprint(l.out, screen.MoveCursor(screen.InputRow, col))
 }
 
 // readLineInput reads one line inside a prompt frame with echo and
@@ -153,11 +161,11 @@ func (l *screenLoop) customsAdd() string {
 	if idx < 0 {
 		return "customs"
 	}
-	title, ok := l.readLineInput(i18n.T(l.lang, "customs.title"), i18n.T(l.lang, "customs.titleLabel")+": ")
+	title, ok := l.readLineInput(i18n.T(l.lang, customsTitleKey), i18n.T(l.lang, "customs.titleLabel")+": ")
 	if !ok || strings.TrimSpace(title) == "" {
 		return "customs"
 	}
-	body, ok := l.readLineInput(i18n.T(l.lang, "customs.title"), i18n.T(l.lang, "customs.bodyLabel")+" ("+i18n.T(l.lang, "customs.optional")+"): ")
+	body, ok := l.readLineInput(i18n.T(l.lang, customsTitleKey), i18n.T(l.lang, "customs.bodyLabel")+" ("+i18n.T(l.lang, "customs.optional")+"): ")
 	if !ok {
 		return "customs"
 	}
@@ -178,14 +186,14 @@ func (l *screenLoop) customsEdit(sel int) string {
 		return "customs"
 	}
 	current := l.settings.CustomAlerts[sel]
-	title, ok := l.readLineInput(i18n.T(l.lang, "customs.title"), i18n.T(l.lang, "customs.titleLabel")+" ["+current.Title+"]: ")
+	title, ok := l.readLineInput(i18n.T(l.lang, customsTitleKey), i18n.T(l.lang, "customs.titleLabel")+" ["+current.Title+"]: ")
 	if !ok {
 		return "customs"
 	}
 	if strings.TrimSpace(title) == "" {
 		title = current.Title
 	}
-	body, ok := l.readLineInput(i18n.T(l.lang, "customs.title"), i18n.T(l.lang, "customs.bodyLabel")+" ["+current.Body+"]: ")
+	body, ok := l.readLineInput(i18n.T(l.lang, customsTitleKey), i18n.T(l.lang, "customs.bodyLabel")+" ["+current.Body+"]: ")
 	if !ok {
 		return "customs"
 	}

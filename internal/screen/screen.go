@@ -5,6 +5,7 @@
 package screen
 
 import (
+	"fmt"
 	"strings"
 )
 
@@ -167,6 +168,39 @@ func Render(f Frame, width int) string {
 	b.WriteString(border(width) + "\n")
 	b.WriteString(FgGray + f.Footer + Reset + "\n")
 	return b.String()
+}
+
+// InputRow is the 1-indexed terminal row of the input row in a
+// single-item prompt frame (title=1, top border=2, input=3).
+const InputRow = 3
+
+// MoveCursor returns the ANSI CUP sequence placing the hardware cursor
+// at the given 1-indexed row and column, clamping each to >= 1.
+func MoveCursor(row, col int) string {
+	if row < 1 {
+		row = 1
+	}
+	if col < 1 {
+		col = 1
+	}
+	return fmt.Sprintf("\x1b[%d;%dH", row, col)
+}
+
+// InputCursorCol returns the 1-indexed column just after prompt+typed in
+// the input row: 1 + marker width ("> ") + prompt runes + typed runes,
+// clamped to [1, effectiveWidth] where effectiveWidth mirrors Render.
+func InputCursorCol(prompt string, typed int, width int) int {
+	if width < 10 {
+		width = 10
+	}
+	col := 1 + 2 + len([]rune(prompt)) + typed
+	if col < 1 {
+		return 1
+	}
+	if col > width {
+		return width
+	}
+	return col
 }
 
 // ClampSelection keeps selected inside the list bounds.
