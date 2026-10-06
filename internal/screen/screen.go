@@ -21,6 +21,7 @@ const (
 	FgRed      = "\x1b[31m"
 	BgBlack    = "\x1b[40m"
 	BgDarkRed  = "\x1b[48;5;88m"
+	BgWhite    = "\x1b[47m"
 	HideCursor = "\x1b[?25l"
 	ShowCursor = "\x1b[?25h"
 	AltEnter   = "\x1b[?1049h"
@@ -173,6 +174,14 @@ func Render(f Frame, width int) string {
 // InputRow is the 1-indexed terminal row of the input row in a
 // single-item prompt frame (title=1, top border=2, input=3).
 const InputRow = 3
+
+// CursorBlock returns the drawn insertion-point block: a white-bg ASCII
+// space (solid white cell, zero wide-rune risk) followed by Reset. The
+// hardware cursor stays hidden during text input; this block is written
+// at the insertion point after every prompt-frame render instead.
+func CursorBlock() string {
+	return BgWhite + " " + Reset
+}
 
 // MoveCursor returns the ANSI CUP sequence placing the hardware cursor
 // at the given 1-indexed row and column, clamping each to >= 1.

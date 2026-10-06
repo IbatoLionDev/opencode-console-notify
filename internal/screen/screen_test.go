@@ -136,6 +136,12 @@ func TestMoveCursorFormatAndClamp(t *testing.T) {
 	}
 }
 
+func TestCursorBlockIsWhiteCell(t *testing.T) {
+	if got := CursorBlock(); got != BgWhite+" "+Reset {
+		t.Fatalf("CursorBlock() = %q, want BgWhite+space+Reset", got)
+	}
+}
+
 func TestInputCursorCol(t *testing.T) {
 	const titlePrompt = "Title: "
 	cases := []struct {

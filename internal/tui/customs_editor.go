@@ -66,13 +66,17 @@ func (l *screenLoop) promptFrame(title, prompt string, buf []rune) {
 	// hardware cursor inside the input row after prompt+typed buffer.
 	col := screen.InputCursorCol(prompt, len(buf), l.width)
 	fmt.Fprint(l.out, screen.MoveCursor(screen.InputRow, col))
+	// Drawn white block marks the insertion point; the hardware cursor
+	// stays hidden (EnterFrame hides, LeaveFrame restores).
+	fmt.Fprint(l.out, screen.CursorBlock())
 }
 
 // readLineInput reads one line inside a prompt frame with echo and
-// backspace. Enter submits (trimmed), Esc aborts (ok=false). The cursor
-// shows while typing and hides again on return.
+// backspace. Enter submits (trimmed), Esc aborts (ok=false). The drawn
+// white block marks the insertion point while typing; the hardware
+// cursor stays hidden (HideCursor defer is safety — EnterFrame already
+// hides, LeaveFrame restores).
 func (l *screenLoop) readLineInput(frameTitle, prompt string) (string, bool) {
-	fmt.Fprint(l.out, screen.ShowCursor)
 	defer fmt.Fprint(l.out, screen.HideCursor)
 	var runes []rune
 	for {
