@@ -3,6 +3,16 @@
 All notable changes to this project are documented here, newest first.
 Version headers link to the GitHub release when one exists.
 
+## [2.3.0] - Unreleased
+
+### Added
+
+- Fullscreen TUI answers the mouse: left click selects and activates
+  (menu opens, alerts/customs toggle, language sets, event catalog
+  picks), the wheel scrolls lists. SGR mouse (1000 + 1006) turns on
+  with the alternate screen and off on every exit path; keyboard,
+  line mode, pipes and scripts are unchanged. Zero new dependencies.
+
 ## [2.2.2] - 2026-10-06
 
 ### Fixed
