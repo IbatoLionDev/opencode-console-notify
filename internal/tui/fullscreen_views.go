@@ -81,6 +81,12 @@ func (l *screenLoop) runMenu(sel *int) string {
 		*sel = idx
 		return menuTarget(idx)
 	}
+	if k.Key == screen.KeyMouseMotion {
+		if idx, ok := screen.ItemIndexAtRow(items, *sel, screen.FrameHeight(l.height), k.MouseY); ok {
+			*sel = idx
+		}
+		return "menu"
+	}
 	if k.Key == screen.KeyRune {
 		if target := menuShortcut(k.Rune); target != "" {
 			return target
@@ -111,8 +117,8 @@ func (l *screenLoop) runInfo() string {
 	fmt.Fprint(l.out, screen.Render(frame, l.width))
 	if k, err := l.readKey(); err != nil {
 		return "abort"
-	} else if k.Key == screen.KeyMouseClick || k.Key == screen.KeyMouseWheel {
-		return "menu"
+	} else if k.Key == screen.KeyMouseMotion {
+		return "info"
 	}
 	return "menu"
 }

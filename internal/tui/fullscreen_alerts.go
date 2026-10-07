@@ -89,6 +89,12 @@ func (l *screenLoop) alertsMouse(k screen.ParsedKey, sel *int, items []screen.It
 		*sel = screen.MoveSteps(len(items), *sel, k.Wheel)
 		return "alerts", true
 	}
+	if k.Key == screen.KeyMouseMotion {
+		if idx, ok := screen.ItemIndexAtRow(items, *sel, screen.FrameHeight(l.height), k.MouseY); ok {
+			*sel = idx
+		}
+		return "alerts", true
+	}
 	if k.Key != screen.KeyMouseClick {
 		return "", false
 	}

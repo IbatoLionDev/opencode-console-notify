@@ -81,6 +81,24 @@ func TestItemIndexAtRow(t *testing.T) {
 	}
 }
 
+func TestParseMouseMotion(t *testing.T) {
+	hover, size := ParseKey([]byte("\x1b[<35;12;7M"))
+	if hover.Key != KeyMouseMotion || hover.MouseX != 12 || hover.MouseY != 7 || size != 11 {
+		t.Fatalf("hover must parse coords, got %+v size %d", hover, size)
+	}
+	drag, _ := ParseKey([]byte("\x1b[<32;1;1M"))
+	if drag.Key != KeyMouseMotion {
+		t.Fatalf("drag must report motion, got %+v", drag)
+	}
+	rel, _ := ParseKey([]byte("\x1b[<35;1;1m"))
+	if rel.Key != KeyUnknown {
+		t.Fatalf("motion release must stay unknown, got %+v", rel)
+	}
+	if _, size := ParseKey([]byte("\x1b[<35;12")); size != 0 {
+		t.Fatalf("split motion must wait for more bytes, got size %d", size)
+	}
+}
+
 func TestMouseFrameToggles(t *testing.T) {
 	if !strings.Contains(EnterFrame(), MouseEnable) {
 		t.Fatal("enter frame must enable SGR mouse")

@@ -40,6 +40,12 @@ func pickerMouse(k screen.ParsedKey, sel int, items []screen.Item, height int) (
 	if k.Key == screen.KeyMouseWheel {
 		return screen.MoveSteps(len(items), sel, k.Wheel), -1, true
 	}
+	if k.Key == screen.KeyMouseMotion {
+		if idx, ok := screen.ItemIndexAtRow(items, sel, height, k.MouseY); ok {
+			return idx, -1, true
+		}
+		return sel, -1, true
+	}
 	if k.Key != screen.KeyMouseClick {
 		return sel, -1, false
 	}

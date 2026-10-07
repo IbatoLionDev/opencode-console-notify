@@ -62,6 +62,12 @@ func (l *screenLoop) runCustoms(sel *int) string {
 		}
 		return "customs"
 	}
+	if k.Key == screen.KeyMouseMotion {
+		if idx, ok := screen.ItemIndexAtRow(frame.Items, *sel, screen.FrameHeight(l.height), k.MouseY); ok {
+			*sel = screen.ClampSelection(len(customs), idx)
+		}
+		return "customs"
+	}
 	if k.Key == screen.KeyRune {
 		return l.customsRuneKey(k.Rune, *sel)
 	}

@@ -18,10 +18,13 @@ const (
 	KeyRune
 	KeyMouseClick
 	KeyMouseWheel
+	// KeyMouseMotion is a pointer move (SGR Cb with bit 5 + M).
+	// Hover only moves the selection; it never activates.
+	KeyMouseMotion
 )
 
 // ParsedKey is a Key plus the rune for KeyRune (shortcuts like 1-5, l, q).
-// Mouse clicks carry 1-indexed terminal coords in MouseX/MouseY;
+// Mouse clicks and motion carry 1-indexed terminal coords in MouseX/MouseY;
 // wheel events carry Wheel (-1 up, +1 down) plus the coords.
 type ParsedKey struct {
 	Key    Key

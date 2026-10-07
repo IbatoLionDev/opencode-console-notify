@@ -17,12 +17,11 @@ const (
 	ShowCursor = "\x1b[?25h"
 	AltEnter   = "\x1b[?1049h"
 	AltLeave   = "\x1b[?1049l"
-	// MouseEnable turns on basic click + wheel reporting with SGR
-	// extended coordinates (DECSET 1000 + 1006). MouseDisable turns
-	// both off. Only the fullscreen loop writes them; line mode,
-	// pipes and scripts never touch the mouse.
-	MouseEnable  = "\x1b[?1000h\x1b[?1006h"
-	MouseDisable = "\x1b[?1006l\x1b[?1000l"
+	// MouseEnable turns on click, hover and wheel reporting (DECSET
+	// 1000 + 1003 + 1006); MouseDisable turns them all off. Only the
+	// fullscreen loop writes them; line mode never touches the mouse.
+	MouseEnable  = "\x1b[?1000h\x1b[?1003h\x1b[?1006h"
+	MouseDisable = "\x1b[?1006l\x1b[?1003l\x1b[?1000l"
 	Home         = "\x1b[H"
 	Clear        = "\x1b[2J"
 	EraseBelow   = "\x1b[J"

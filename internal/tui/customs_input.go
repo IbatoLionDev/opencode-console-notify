@@ -67,6 +67,36 @@ func (l *screenLoop) promptFrame(title, prompt string, buf []rune) {
 	fmt.Fprint(l.out, screen.CursorBlock())
 }
 
+// swallowMouseReport discards one SGR mouse report whose ESC was already
+// consumed. It reports whether pending held a complete "[<...M/m"
+// report; anything else (a lone ESC press) is left for the caller.
+func (l *screenLoop) swallowMouseReport() bool {
+	for {
+		if len(l.pending) < 2 || l.pending[0] != '[' || l.pending[1] != '<' {
+			return false
+		}
+		for i := 2; i < len(l.pending); i++ {
+			c := l.pending[i]
+			if c == 'M' || c == 'm' {
+				l.pending = l.pending[i+1:]
+				return true
+			}
+			if (c < '0' || c > '9') && c != ';' {
+				return false
+			}
+		}
+		var chunk [16]byte
+		n, err := l.in.Read(chunk[:])
+		if n > 0 {
+			l.pending = append(l.pending, chunk[:n]...)
+			continue
+		}
+		if err != nil {
+			return false
+		}
+	}
+}
+
 // readLineInput reads one line inside a prompt frame with echo and
 // backspace. Enter submits (trimmed), Esc aborts (ok=false). The drawn
 // white block marks the insertion point while typing; the hardware
@@ -85,6 +115,11 @@ func (l *screenLoop) readLineInput(frameTitle, prompt string) (string, bool) {
 		case '\r', '\n':
 			return strings.TrimSpace(string(runes)), true
 		case 0x1b:
+			// A mouse report starts with ESC too: swallow it so hover
+			// and clicks neither abort the prompt nor dirty the buffer.
+			if l.swallowMouseReport() {
+				continue
+			}
 			return "", false
 		case 0x7f, '\b':
 			if len(runes) > 0 {

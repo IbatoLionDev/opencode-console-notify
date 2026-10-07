@@ -1,6 +1,6 @@
 // SGR mouse reports: ESC [ < Cb ; Cx ; Cy M/m. Wheel is Cb 64/65 + M,
-// left click is Cb 0 (+modifier bits) + M. Release (m) is ignored so
-// one press never activates twice.
+// motion is Cb with bit 5 + M, left click is Cb 0 (+modifier bits) + M.
+// Release (m) is ignored so one press never activates twice.
 package screen
 
 import (
@@ -32,6 +32,11 @@ func parseMouseSGR(buf []byte) (ParsedKey, int) {
 	}
 	if cb == 65 {
 		return ParsedKey{Key: KeyMouseWheel, MouseX: x, MouseY: y, Wheel: 1}, size
+	}
+	// Motion (hover or drag) reports set bit 5 (32) with M. Hover only
+	// moves the selection; views never activate from it.
+	if cb&32 != 0 {
+		return ParsedKey{Key: KeyMouseMotion, MouseX: x, MouseY: y}, size
 	}
 	// Left-button press is Cb 0 plus optional modifier bits
 	// (shift=4, alt=8, ctrl=16); low two bits 0 means no button drag.
