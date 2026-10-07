@@ -77,6 +77,7 @@ func (l *screenLoop) loop(restore func()) int {
 	menuSel := 0
 	alertSel := 0
 	customsSel := 0
+	languageSel := -1
 	view := "menu"
 	for {
 		switch view {
@@ -87,7 +88,7 @@ func (l *screenLoop) loop(restore func()) int {
 		case "customs":
 			view = l.runCustoms(&customsSel)
 		case "language":
-			view = l.runLanguage()
+			view = l.runLanguage(&languageSel)
 		case "info":
 			view = l.runInfo()
 		case "update":

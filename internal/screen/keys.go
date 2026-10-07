@@ -16,12 +16,22 @@ const (
 	KeyEsc
 	KeyQuit
 	KeyRune
+	KeyMouseClick
+	KeyMouseWheel
+	// KeyMouseMotion is a pointer move (SGR Cb with bit 5 + M).
+	// Hover only moves the selection; it never activates.
+	KeyMouseMotion
 )
 
 // ParsedKey is a Key plus the rune for KeyRune (shortcuts like 1-5, l, q).
+// Mouse clicks and motion carry 1-indexed terminal coords in MouseX/MouseY;
+// wheel events carry Wheel (-1 up, +1 down) plus the coords.
 type ParsedKey struct {
-	Key  Key
-	Rune rune
+	Key    Key
+	Rune   rune
+	MouseX int
+	MouseY int
+	Wheel  int
 }
 
 // ParseKey decodes one keypress from the head of buf and reports how many
@@ -62,6 +72,10 @@ func parseEscape(buf []byte) (ParsedKey, int) {
 	}
 	if len(buf) == 2 {
 		return ParsedKey{Key: KeyUnknown}, 0
+	}
+	// SGR mouse: ESC [ < Cb ; Cx ; Cy M/m (see keys_mouse.go).
+	if buf[1] == '[' && len(buf) > 3 && buf[2] == '<' {
+		return parseMouseSGR(buf)
 	}
 	if buf[1] != '[' && buf[1] != 'O' {
 		return ParsedKey{Key: KeyEsc}, 1

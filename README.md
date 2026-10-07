@@ -132,7 +132,8 @@ opencode-notify.exe config
 
 Opens an interactive TUI (English/Spanish) with language, update, info,
 alerts, and customs. On a real console it renders fullscreen with keyboard
-navigation (j/k/arrows, Enter, Space); on pipes and scripts the line mode
+navigation (j/k/arrows, Enter, Space) plus mouse (hover highlights, click
+selects/activates, wheel scrolls); on pipes and scripts the line mode
 runs instead. Language applies to the TUI and the default notification texts.
 Alerts lists the four default events with their triggers; Space toggles each
 one and the plugin honors it on the next event. Every view prints its keys
