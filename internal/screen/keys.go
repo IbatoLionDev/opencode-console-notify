@@ -16,12 +16,19 @@ const (
 	KeyEsc
 	KeyQuit
 	KeyRune
+	KeyMouseClick
+	KeyMouseWheel
 )
 
 // ParsedKey is a Key plus the rune for KeyRune (shortcuts like 1-5, l, q).
+// Mouse clicks carry 1-indexed terminal coords in MouseX/MouseY;
+// wheel events carry Wheel (-1 up, +1 down) plus the coords.
 type ParsedKey struct {
-	Key  Key
-	Rune rune
+	Key    Key
+	Rune   rune
+	MouseX int
+	MouseY int
+	Wheel  int
 }
 
 // ParseKey decodes one keypress from the head of buf and reports how many
@@ -62,6 +69,12 @@ func parseEscape(buf []byte) (ParsedKey, int) {
 	}
 	if len(buf) == 2 {
 		return ParsedKey{Key: KeyUnknown}, 0
+	}
+	// SGR mouse: ESC [ < Cb ; Cx ; Cy M/m. Wheel is Cb 64/65 + M,
+	// left click is Cb 0 (+modifier bits) + M. Release (m) is
+	// ignored so one press never activates twice.
+	if buf[1] == '[' && len(buf) > 3 && buf[2] == '<' {
+		return parseMouseSGR(buf)
 	}
 	if buf[1] != '[' && buf[1] != 'O' {
 		return ParsedKey{Key: KeyEsc}, 1
@@ -113,4 +126,81 @@ func decodeRune(buf []byte) (rune, int) {
 		return 0xFFFD, 1
 	}
 	return r, size
+}
+
+// parseMouseSGR decodes one SGR mouse report from the head of buf.
+// Incomplete reports return zero consumed so the caller waits for
+// more bytes; malformed reports consume the introducer as unknown.
+func parseMouseSGR(buf []byte) (ParsedKey, int) {
+	end := -1
+	for i := 3; i < len(buf); i++ {
+		if buf[i] == 'M' || buf[i] == 'm' {
+			end = i
+			break
+		}
+		if (buf[i] < '0' || buf[i] > '9') && buf[i] != ';' {
+			return ParsedKey{Key: KeyUnknown}, 3
+		}
+	}
+	if end < 0 {
+		return ParsedKey{Key: KeyUnknown}, 0
+	}
+	release := buf[end] == 'm'
+	body := string(buf[3:end])
+	cb, cx, cy := 0, 0, 0
+	parts := 0
+	num := 0
+	hasNum := false
+	for i := 0; i <= len(body); i++ {
+		var c byte
+		if i < len(body) {
+			c = body[i]
+		} else {
+			c = ';'
+		}
+		if c >= '0' && c <= '9' {
+			num = num*10 + int(c-'0')
+			hasNum = true
+			continue
+		}
+		if c != ';' {
+			return ParsedKey{Key: KeyUnknown}, end + 1
+		}
+		if !hasNum {
+			return ParsedKey{Key: KeyUnknown}, end + 1
+		}
+		switch parts {
+		case 0:
+			cb = num
+		case 1:
+			cx = num
+		case 2:
+			cy = num
+		default:
+			return ParsedKey{Key: KeyUnknown}, end + 1
+		}
+		parts++
+		num = 0
+		hasNum = false
+	}
+	if parts != 3 {
+		return ParsedKey{Key: KeyUnknown}, end + 1
+	}
+	size := end + 1
+	if release {
+		return ParsedKey{Key: KeyUnknown}, size
+	}
+	// Wheel reports end with M and Cb 64 (up) or 65 (down).
+	if cb == 64 {
+		return ParsedKey{Key: KeyMouseWheel, MouseX: cx, MouseY: cy, Wheel: -1}, size
+	}
+	if cb == 65 {
+		return ParsedKey{Key: KeyMouseWheel, MouseX: cx, MouseY: cy, Wheel: 1}, size
+	}
+	// Left-button press is Cb 0 plus optional modifier bits
+	// (shift=4, alt=8, ctrl=16); low two bits 0 means no button drag.
+	if cb&0x43 == 0 {
+		return ParsedKey{Key: KeyMouseClick, MouseX: cx, MouseY: cy}, size
+	}
+	return ParsedKey{Key: KeyUnknown}, size
 }
