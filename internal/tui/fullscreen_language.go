@@ -25,21 +25,8 @@ func (l *screenLoop) runLanguage() string {
 	if err != nil {
 		return "abort"
 	}
-	if k.Key == screen.KeyMouseWheel {
-		if k.Wheel < 0 {
-			return l.setLanguage("en")
-		}
-		return l.setLanguage("es")
-	}
-	if k.Key == screen.KeyMouseClick {
-		idx, ok := screen.ItemIndexAtRow(items, screen.ClampSelection(len(items), langIndex(l.lang)), screen.FrameHeight(l.height), k.MouseY)
-		if !ok {
-			return "language"
-		}
-		if idx == 0 {
-			return l.setLanguage("en")
-		}
-		return l.setLanguage("es")
+	if next, ok := l.languageMouse(k, items); ok {
+		return next
 	}
 	if k.Key == screen.KeyRune {
 		if k.Rune == '1' || k.Rune == 'e' || k.Rune == 'E' {
@@ -59,6 +46,29 @@ func (l *screenLoop) runLanguage() string {
 		return "menu"
 	}
 	return "language"
+}
+
+// languageMouse handles one mouse report for the language view,
+// reporting the next view and whether the key was consumed. Wheel
+// flips between languages, click picks the row under the cursor.
+func (l *screenLoop) languageMouse(k screen.ParsedKey, items []screen.Item) (string, bool) {
+	if k.Key == screen.KeyMouseWheel {
+		if k.Wheel < 0 {
+			return l.setLanguage("en"), true
+		}
+		return l.setLanguage("es"), true
+	}
+	if k.Key != screen.KeyMouseClick {
+		return "", false
+	}
+	idx, ok := screen.ItemIndexAtRow(items, screen.ClampSelection(len(items), langIndex(l.lang)), screen.FrameHeight(l.height), k.MouseY)
+	if !ok {
+		return "language", true
+	}
+	if idx == 0 {
+		return l.setLanguage("en"), true
+	}
+	return l.setLanguage("es"), true
 }
 
 func langIndex(lang string) int {

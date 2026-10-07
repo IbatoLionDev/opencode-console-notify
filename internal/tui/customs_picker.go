@@ -11,9 +11,8 @@ import (
 	"github.com/IbatoLionDev/opencode-console-notify/internal/screen"
 )
 
-// pickEvent renders the catalog as a scrollable frame and returns the
-// chosen index, or -1 on cancel. Noisy events carry a "!" state mark.
-func (l *screenLoop) pickEvent(preselect string) int {
+// pickerItems builds the catalog rows, preselecting the current event.
+func (l *screenLoop) pickerItems(preselect string) ([]screen.Item, int) {
 	events := config.KnownEvents()
 	items := make([]screen.Item, 0, len(events))
 	sel := 0
@@ -31,6 +30,30 @@ func (l *screenLoop) pickEvent(preselect string) int {
 		}
 		items = append(items, screen.Item{Label: e.Type, Detail: desc, State: state})
 	}
+	return items, sel
+}
+
+// pickerMouse handles wheel (scroll) and click (pick) for the catalog.
+// It returns the new selection, the picked index (-1 while scrolling),
+// and whether the key was a mouse report.
+func pickerMouse(k screen.ParsedKey, sel int, items []screen.Item, height int) (int, int, bool) {
+	if k.Key == screen.KeyMouseWheel {
+		return screen.MoveSteps(len(items), sel, k.Wheel), -1, true
+	}
+	if k.Key != screen.KeyMouseClick {
+		return sel, -1, false
+	}
+	idx, ok := screen.ItemIndexAtRow(items, sel, height, k.MouseY)
+	if !ok {
+		return sel, -1, true
+	}
+	return idx, idx, true
+}
+
+// pickEvent renders the catalog as a scrollable frame and returns the
+// chosen index, or -1 on cancel. Noisy events carry a "!" state mark.
+func (l *screenLoop) pickEvent(preselect string) int {
+	items, sel := l.pickerItems(preselect)
 	for {
 		frame := screen.Frame{
 			Title:    i18n.T(l.lang, "customs.pickEvent"),
@@ -44,16 +67,12 @@ func (l *screenLoop) pickEvent(preselect string) int {
 		if err != nil {
 			return -1
 		}
-		if k.Key == screen.KeyMouseWheel {
-			sel = screen.MoveSteps(len(items), sel, k.Wheel)
-			continue
-		}
-		if k.Key == screen.KeyMouseClick {
-			idx, ok := screen.ItemIndexAtRow(items, sel, screen.FrameHeight(l.height), k.MouseY)
-			if !ok {
-				continue
+		if ns, picked, ok := pickerMouse(k, sel, items, screen.FrameHeight(l.height)); ok {
+			if picked >= 0 {
+				return picked
 			}
-			return idx
+			sel = ns
+			continue
 		}
 		if k.Key == screen.KeyRune {
 			return -1

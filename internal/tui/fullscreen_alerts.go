@@ -55,20 +55,8 @@ func (l *screenLoop) runAlerts(sel *int) string {
 	if err != nil {
 		return "abort"
 	}
-	if k.Key == screen.KeyMouseWheel {
-		*sel = screen.MoveSteps(len(items), *sel, k.Wheel)
-		return "alerts"
-	}
-	if k.Key == screen.KeyMouseClick {
-		idx, ok := screen.ItemIndexAtRow(items, *sel, screen.FrameHeight(l.height), k.MouseY)
-		if !ok {
-			return "alerts"
-		}
-		*sel = idx
-		if !l.toggleAlert(idx) {
-			return "abort"
-		}
-		return "alerts"
+	if next, ok := l.alertsMouse(k, sel, items); ok {
+		return next
 	}
 	if k.Key == screen.KeyRune {
 		if idx := digitIndex(k.Rune, len(items)); idx >= 0 {
@@ -91,6 +79,28 @@ func (l *screenLoop) runAlerts(sel *int) string {
 		return "menu"
 	}
 	return "alerts"
+}
+
+// alertsMouse handles one mouse report for the alerts view, reporting
+// the next view and whether the key was consumed. Wheel scrolls,
+// click toggles the row under the cursor.
+func (l *screenLoop) alertsMouse(k screen.ParsedKey, sel *int, items []screen.Item) (string, bool) {
+	if k.Key == screen.KeyMouseWheel {
+		*sel = screen.MoveSteps(len(items), *sel, k.Wheel)
+		return "alerts", true
+	}
+	if k.Key != screen.KeyMouseClick {
+		return "", false
+	}
+	idx, ok := screen.ItemIndexAtRow(items, *sel, screen.FrameHeight(l.height), k.MouseY)
+	if !ok {
+		return "alerts", true
+	}
+	*sel = idx
+	if !l.toggleAlert(idx) {
+		return "abort", true
+	}
+	return "alerts", true
 }
 
 // digitIndex maps 1-based digit runes to item indexes, -1 when outside.
