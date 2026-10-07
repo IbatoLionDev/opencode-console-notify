@@ -55,6 +55,21 @@ func (l *screenLoop) runAlerts(sel *int) string {
 	if err != nil {
 		return "abort"
 	}
+	if k.Key == screen.KeyMouseWheel {
+		*sel = screen.MoveSteps(len(items), *sel, k.Wheel)
+		return "alerts"
+	}
+	if k.Key == screen.KeyMouseClick {
+		idx, ok := screen.ItemIndexAtRow(items, *sel, screen.FrameHeight(l.height), k.MouseY)
+		if !ok {
+			return "alerts"
+		}
+		*sel = idx
+		if !l.toggleAlert(idx) {
+			return "abort"
+		}
+		return "alerts"
+	}
 	if k.Key == screen.KeyRune {
 		if idx := digitIndex(k.Rune, len(items)); idx >= 0 {
 			if !l.toggleAlert(idx) {

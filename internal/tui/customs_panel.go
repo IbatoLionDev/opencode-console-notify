@@ -47,6 +47,21 @@ func (l *screenLoop) runCustoms(sel *int) string {
 	if err != nil {
 		return "abort"
 	}
+	if k.Key == screen.KeyMouseWheel {
+		*sel = screen.MoveSteps(len(customs), *sel, k.Wheel)
+		return "customs"
+	}
+	if k.Key == screen.KeyMouseClick {
+		idx, ok := screen.ItemIndexAtRow(frame.Items, *sel, screen.FrameHeight(l.height), k.MouseY)
+		if !ok {
+			return "customs"
+		}
+		*sel = screen.ClampSelection(len(customs), idx)
+		if !l.toggleCustomAt(*sel) {
+			return "abort"
+		}
+		return "customs"
+	}
 	if k.Key == screen.KeyRune {
 		return l.customsRuneKey(k.Rune, *sel)
 	}

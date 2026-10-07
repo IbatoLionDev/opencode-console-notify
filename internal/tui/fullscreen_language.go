@@ -25,6 +25,22 @@ func (l *screenLoop) runLanguage() string {
 	if err != nil {
 		return "abort"
 	}
+	if k.Key == screen.KeyMouseWheel {
+		if k.Wheel < 0 {
+			return l.setLanguage("en")
+		}
+		return l.setLanguage("es")
+	}
+	if k.Key == screen.KeyMouseClick {
+		idx, ok := screen.ItemIndexAtRow(items, screen.ClampSelection(len(items), langIndex(l.lang)), screen.FrameHeight(l.height), k.MouseY)
+		if !ok {
+			return "language"
+		}
+		if idx == 0 {
+			return l.setLanguage("en")
+		}
+		return l.setLanguage("es")
+	}
 	if k.Key == screen.KeyRune {
 		if k.Rune == '1' || k.Rune == 'e' || k.Rune == 'E' {
 			return l.setLanguage("en")

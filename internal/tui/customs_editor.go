@@ -135,6 +135,17 @@ func (l *screenLoop) pickEvent(preselect string) int {
 		if err != nil {
 			return -1
 		}
+		if k.Key == screen.KeyMouseWheel {
+			sel = screen.MoveSteps(len(items), sel, k.Wheel)
+			continue
+		}
+		if k.Key == screen.KeyMouseClick {
+			idx, ok := screen.ItemIndexAtRow(items, sel, screen.FrameHeight(l.height), k.MouseY)
+			if !ok {
+				continue
+			}
+			return idx
+		}
 		if k.Key == screen.KeyRune {
 			return -1
 		}
