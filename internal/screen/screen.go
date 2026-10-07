@@ -5,32 +5,7 @@
 package screen
 
 import (
-	"fmt"
 	"strings"
-)
-
-// Palette: black background, soft-white body, dark-red selection with
-// bright-white text, dim-red borders, light-gray footer. Red is reserved
-// for selection and borders so the screen never looks saturated.
-const (
-	Reset        = "\x1b[0m"
-	Bold         = "\x1b[1m"
-	Dim          = "\x1b[2m"
-	FgWhite      = "\x1b[97m"
-	FgGray       = "\x1b[90m"
-	FgRed        = "\x1b[31m"
-	BgBlack      = "\x1b[40m"
-	BgDarkRed    = "\x1b[48;5;88m"
-	BgWhite      = "\x1b[47m"
-	HideCursor   = "\x1b[?25l"
-	ShowCursor   = "\x1b[?25h"
-	AltEnter     = "\x1b[?1049h"
-	AltLeave     = "\x1b[?1049l"
-	MouseEnable  = "\x1b[?1000h\x1b[?1006h"
-	MouseDisable = "\x1b[?1006l\x1b[?1000l"
-	Home         = "\x1b[H"
-	Clear        = "\x1b[2J"
-	EraseBelow   = "\x1b[J"
 )
 
 // Item is one selectable row. Detail renders as a dim second line and may
@@ -173,47 +148,6 @@ func Render(f Frame, width int) string {
 	return b.String()
 }
 
-// InputRow is the 1-indexed terminal row of the input row in a
-// single-item prompt frame (title=1, top border=2, input=3).
-const InputRow = 3
-
-// CursorBlock returns the drawn insertion-point block: a white-bg ASCII
-// space (solid white cell, zero wide-rune risk) followed by Reset. The
-// hardware cursor stays hidden during text input; this block is written
-// at the insertion point after every prompt-frame render instead.
-func CursorBlock() string {
-	return BgWhite + " " + Reset
-}
-
-// MoveCursor returns the ANSI CUP sequence placing the hardware cursor
-// at the given 1-indexed row and column, clamping each to >= 1.
-func MoveCursor(row, col int) string {
-	if row < 1 {
-		row = 1
-	}
-	if col < 1 {
-		col = 1
-	}
-	return fmt.Sprintf("\x1b[%d;%dH", row, col)
-}
-
-// InputCursorCol returns the 1-indexed column just after prompt+typed in
-// the input row: 1 + marker width ("> ") + prompt runes + typed runes,
-// clamped to [1, effectiveWidth] where effectiveWidth mirrors Render.
-func InputCursorCol(prompt string, typed int, width int) int {
-	if width < 10 {
-		width = 10
-	}
-	col := 1 + 2 + len([]rune(prompt)) + typed
-	if col < 1 {
-		return 1
-	}
-	if col > width {
-		return width
-	}
-	return col
-}
-
 // ClampSelection keeps selected inside the list bounds.
 func ClampSelection(n, selected int) int {
 	if n <= 0 {
@@ -249,44 +183,4 @@ func FrameHeight(termRows int) int {
 		return 1
 	}
 	return h
-}
-
-// ItemFirstRow is the 1-indexed terminal row of the first item in a
-// list frame (title=1, top border=2, items start at 3). The JS stack
-// renders two extra escape-only lines first, so its first item row is
-// 5 (see lib/screen/frame.js FIRST_ITEM_ROW).
-const ItemFirstRow = 3
-
-// ItemIndexAtRow maps a 1-indexed terminal row to an item index,
-// honoring the viewport around selected. It returns false when the
-// row is chrome (title/borders/footer) or outside the visible items.
-func ItemIndexAtRow(items []Item, selected, height, termRow int) (int, bool) {
-	if len(items) == 0 {
-		return 0, false
-	}
-	rel := termRow - ItemFirstRow
-	if rel < 0 {
-		return 0, false
-	}
-	visible, offset := Viewport(items, selected, height)
-	used := 0
-	for i, it := range visible {
-		need := linesPerItem(it)
-		if rel >= used && rel < used+need {
-			return offset + i, true
-		}
-		used += need
-	}
-	return 0, false
-}
-
-// EnterFrame is the byte prefix written once when the fullscreen loop
-// starts; LeaveFrame restores the previous screen and cursor.
-func EnterFrame() string {
-	return AltEnter + Clear + Home + HideCursor + MouseEnable
-}
-
-// LeaveFrame is written once on every exit path, including errors.
-func LeaveFrame() string {
-	return MouseDisable + ShowCursor + AltLeave
 }
