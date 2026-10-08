@@ -11,7 +11,6 @@ jobs:
     runs-on: windows-latest
     steps:
       - uses: actions/checkout@v4
-
       - name: Set up Go
         uses: actions/setup-go@v5
         with:
@@ -143,3 +142,81 @@ jobs:
           if (Test-Path -LiteralPath $aumidKey) {
             throw "AUMID key still present after npm uninstall: $aumidKey"
           }
+
+  # Linux runtime: Go build/vet/fmt/tests plus the install.sh smoke test,
+  # all on ubuntu-latest (bash). The `test` command is NOT run here: a
+  # headless runner has no D-Bus session, so notify-send cannot deliver.
+  linux:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+
+      - name: Build
+        run: go build ./...
+
+      - name: Vet
+        run: go vet ./...
+
+      - name: Check gofmt
+        run: |
+          diff="$(gofmt -l cmd internal plugin)"
+          if [ -n "$diff" ]; then
+            echo 'gofmt found unformatted files:'
+            echo "$diff"
+            exit 1
+          fi
+
+      - name: Test
+        run: go test ./... -count=1
+
+      - name: Install notify-send
+        run: sudo apt-get update && sudo apt-get install -y libnotify-bin
+
+      - name: install.sh smoke test
+        run: |
+          set -euo pipefail
+          pluginsDir="$(mktemp -d)/plugins"
+          dest="$pluginsDir/console-notify.js"
+          ./install.sh --plugins-dir "$pluginsDir"
+          test -f "$dest" || { echo "plugin file missing after install: $dest"; exit 1; }
+          go run ./cmd/opencode-notify doctor --plugins-dir "$pluginsDir"
+          ./install.sh --plugins-dir "$pluginsDir" --uninstall
+          test ! -f "$dest" || { echo "plugin file still present after uninstall: $dest"; exit 1; }
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Node syntax check (bin + lib)
+        run: |
+          set -euo pipefail
+          find bin lib plugin -name '*.js' | while read -r f; do node --check "$f"; done
+
+      - name: Line-ending guard (LF only, no CR)
+        run: |
+          set -euo pipefail
+          # install.sh must stay LF: a CR byte breaks the shebang line.
+          if grep -q $'\r' install.sh; then
+            echo 'CR bytes found in install.sh'
+            exit 1
+          fi
+
+      - name: npm pack dry run
+        run: npm pack --dry-run
+
+      - name: npm path smoke test
+        run: |
+          set -euo pipefail
+          pluginsDir="$(mktemp -d)/plugins"
+          dest="$pluginsDir/console-notify.js"
+          node bin/opencode-console-notify.js install --plugins-dir "$pluginsDir"
+          test -f "$dest" || { echo "plugin file missing after npm install: $dest"; exit 1; }
+          node bin/opencode-console-notify.js doctor --plugins-dir "$pluginsDir"
+          node bin/opencode-console-notify.js uninstall --plugins-dir "$pluginsDir"
+          test ! -f "$dest" || { echo "plugin file still present after npm uninstall: $dest"; exit 1; }

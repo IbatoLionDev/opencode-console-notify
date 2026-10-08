@@ -1,9 +1,10 @@
-//go:build !windows
+//go:build !windows && !linux
 
 package aumid
 
-// registry_fallback.go is the non-Windows Registry stub. The CLI is
-// Windows-only in v1; this keeps the package compiling elsewhere.
+// registry_fallback.go is the stub for platforms with no identity
+// backend yet (macOS is next). The CLI keeps compiling everywhere;
+// only Windows and Linux install and notify today.
 
 import "errors"
 
