@@ -25,7 +25,7 @@ import { homedir } from "node:os"
 const AUMID = "OpenCode.Notifier"
 const COOLDOWN_MS = 4000
 const MAX_LINE = 160
-const DEBUG_LOG = join(process.env.TEMP || process.env.TMP || ".", "opencode-console-notify.debug.log")
+const DEBUG_LOG = join(process.env.TEMP || process.env.TMP || process.env.TMPDIR || (process.platform === "win32" ? "." : "/tmp"), "opencode-console-notify.debug.log")
 
 // Config file written by the config command (v2.0.0, customs since 2.2).
 // Missing or corrupt means v1 behavior: everything on, English.
@@ -161,6 +161,45 @@ function truncate(value) {
   return `${text.slice(0, end)}...`
 }
 
+// notify-send availability is probed once: most desktops ship
+// libnotify-bin, headless boxes do not, and missing must stay silent
+// (doctor reports it) rather than throwing on every event.
+let notifySendChecked = null
+function notifySendAvailable() {
+  if (notifySendChecked !== null) return notifySendChecked
+  try {
+    notifySendChecked = Boolean(Bun.which("notify-send"))
+  } catch {
+    notifySendChecked = false
+  }
+  return notifySendChecked
+}
+
+// sendToastLinux mirrors sendToast over notify-send: same title/body,
+// same fire-and-forget shape. Tags/cooldowns stay in notify(); replace
+// semantics are a Windows-only nicety notify-send cannot promise.
+function sendToastLinux(title, lines, tag) {
+  if (!notifySendAvailable()) {
+    dbg(`toast SKIP tag=${tag} reason=no-notify-send`)
+    return
+  }
+  const body = [...lines].filter(Boolean).join("\n")
+  try {
+    const proc = Bun.spawn(
+      ["notify-send", "--app-name=OpenCode", "--urgency=normal", "--expire-time=8000", title, body],
+      { stdin: "ignore", stdout: "ignore", stderr: "ignore" },
+    )
+    Promise.resolve(proc.exited).then(
+      (code) => {
+        if (code !== 0) dbg(`toast FAIL tag=${tag} exit=${code}`)
+      },
+      (err) => dbg(`toast FAIL tag=${tag} err=${String(err?.message ?? err)}`),
+    )
+  } catch (err) {
+    dbg(`toast THREW tag=${tag} err=${String(err?.message ?? err)}`)
+  }
+}
+
 function sendToast(title, lines, tag) {
   const texts = [title, ...lines].filter(Boolean)
     .map((line) => `<text>${escapeXml(line)}</text>`)
@@ -212,13 +251,19 @@ export default async ({ client, $, directory }) => {
   }
 
   const notify = (key, lines) => {
-    if (process.platform !== "win32") return
     const now = Date.now()
     if (now - (lastSent.get(key) ?? 0) < COOLDOWN_MS) return
     lastSent.set(key, now)
     // One tag per event kind: same-kind toasts replace each other instead of
-    // piling up, while different kinds (question vs idle) never erase one another.
-    sendToast(title, lines, key.split(":")[0])
+    // piling up on Windows, while different kinds (question vs idle) never
+    // erase one another. notify-send cannot promise replace semantics.
+    if (process.platform === "win32") {
+      sendToast(title, lines, key.split(":")[0])
+      return
+    }
+    if (process.platform === "linux") {
+      sendToastLinux(title, lines, key.split(":")[0])
+    }
   }
 
   const handleIdle = async (p) => {
