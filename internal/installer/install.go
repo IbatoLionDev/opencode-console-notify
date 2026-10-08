@@ -7,6 +7,7 @@ import (
 	"io"
 	"os"
 	"path/filepath"
+	"runtime"
 
 	"github.com/IbatoLionDev/opencode-console-notify/internal/aumid"
 	"github.com/IbatoLionDev/opencode-console-notify/internal/config"
@@ -64,9 +65,34 @@ func Install(pluginsDir string, reg aumid.Registry, out io.Writer) error {
 	fmt.Fprintf(out, "Installed: %s\n", dest)
 	fmt.Fprintf(out, "SHA256:    %x\n", sum)
 	fmt.Fprintf(out, "Source:    embedded plugin/%s (no download)\n", config.PluginFileName)
-	fmt.Fprintf(out, "AUMID:     registered (HKCU:\\Software\\Classes\\AppUserModelId\\%s, DisplayName=%s)\n", aumid.AUMID, aumid.AUMIDDisplayName)
+	fmt.Fprint(out, identityInstalledLine(runtime.GOOS))
 	fmt.Fprintf(out, "Restart OpenCode to load the plugin.\n")
 	return nil
+}
+
+// identityInstalledLine reports the identity half of the install output
+// for one OS: the HKCU key on Windows, the app name everywhere else.
+// Taking goos as a parameter keeps the wording unit-testable on any OS.
+func identityInstalledLine(goos string) string {
+	if goos == "windows" {
+		return fmt.Sprintf("AUMID:     registered (HKCU:\\Software\\Classes\\AppUserModelId\\%s, DisplayName=%s)\n", aumid.AUMID, aumid.AUMIDDisplayName)
+	}
+	return fmt.Sprintf("Identity:  app name %s (no registry on %s)\n", aumid.AUMID, goos)
+}
+
+// identityRemovedLine reports the identity half of the uninstall output
+// for one OS and whether a marker was removed.
+func identityRemovedLine(goos string, removed bool) string {
+	if goos == "windows" {
+		if removed {
+			return fmt.Sprintf("Removed AUMID registry key: HKCU:\\Software\\Classes\\AppUserModelId\\%s\n", aumid.AUMID)
+		}
+		return fmt.Sprintf("AUMID registry key not present, nothing to remove: HKCU:\\Software\\Classes\\AppUserModelId\\%s\n", aumid.AUMID)
+	}
+	if removed {
+		return fmt.Sprintf("Removed identity marker for %s (no registry on %s)\n", aumid.AUMID, goos)
+	}
+	return fmt.Sprintf("No identity marker for %s (no registry on %s), nothing to remove\n", aumid.AUMID, goos)
 }
 
 // Uninstall removes only the plugin file and exactly the AUMID key,
@@ -88,11 +114,7 @@ func Uninstall(pluginsDir string, reg aumid.Registry, out io.Writer) error {
 	if err != nil {
 		return err
 	}
-	if removed {
-		fmt.Fprintf(out, "Removed AUMID registry key: HKCU:\\Software\\Classes\\AppUserModelId\\%s\n", aumid.AUMID)
-	} else {
-		fmt.Fprintf(out, "AUMID registry key not present, nothing to remove: HKCU:\\Software\\Classes\\AppUserModelId\\%s\n", aumid.AUMID)
-	}
+	fmt.Fprint(out, identityRemovedLine(runtime.GOOS, removed))
 
 	fmt.Fprintf(out, "Uninstall complete. Restart OpenCode to unload the plugin.\n")
 	return nil

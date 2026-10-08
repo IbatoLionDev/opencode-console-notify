@@ -140,3 +140,18 @@ func TestUninstallPropagatesRegistryError(t *testing.T) {
 		t.Fatal("expected registry error, got nil")
 	}
 }
+
+func TestIdentityLinesPerOS(t *testing.T) {
+	if got := identityInstalledLine("windows"); !strings.Contains(got, "AUMID:") || !strings.Contains(got, "HKCU") {
+		t.Fatalf("windows install line must name the HKCU key, got %q", got)
+	}
+	if got := identityInstalledLine("linux"); !strings.Contains(got, "Identity:") || !strings.Contains(got, "no registry") {
+		t.Fatalf("linux install line must name the app identity, got %q", got)
+	}
+	if got := identityRemovedLine("windows", true); !strings.Contains(got, "Removed AUMID") {
+		t.Fatalf("windows remove line must confirm removal, got %q", got)
+	}
+	if got := identityRemovedLine("linux", false); !strings.Contains(got, "nothing to remove") {
+		t.Fatalf("linux remove line must report nothing to do, got %q", got)
+	}
+}
