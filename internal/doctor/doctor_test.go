@@ -47,6 +47,7 @@ func assertHealthReport(t *testing.T, report HealthReport, wantHealthy, wantPlug
 }
 
 func TestCheckHealthParityMatrix(t *testing.T) {
+	stubNotifier(t, "/bin/notify-send", nil)
 	tests := []struct {
 		name        string
 		seedFile    bool
@@ -78,6 +79,7 @@ func TestCheckHealthParityMatrix(t *testing.T) {
 }
 
 func TestDoctorExitCodesAndMessages(t *testing.T) {
+	stubNotifier(t, "/bin/notify-send", nil)
 	plugins := t.TempDir()
 	reg := &aumid.FakeRegistry{}
 
@@ -138,6 +140,7 @@ func swapRegistryURL(t *testing.T, url string) {
 }
 
 func TestDoctorPrintsUpdateNoticeWhenNewer(t *testing.T) {
+	stubNotifier(t, "/bin/notify-send", nil)
 	plugins := t.TempDir()
 	reg := &aumid.FakeRegistry{}
 	seedHealthyInstall(t, plugins, reg)
@@ -159,6 +162,7 @@ func TestDoctorPrintsUpdateNoticeWhenNewer(t *testing.T) {
 }
 
 func TestDoctorStaysSilentWhenRegistryDown(t *testing.T) {
+	stubNotifier(t, "/bin/notify-send", nil)
 	plugins := t.TempDir()
 	reg := &aumid.FakeRegistry{}
 	seedHealthyInstall(t, plugins, reg)

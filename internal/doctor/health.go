@@ -30,15 +30,14 @@ type HealthReport struct {
 // Healthy is true only when every half of the end state holds.
 func (r HealthReport) Healthy() bool { return r.PluginOK && r.AUMIDOK && r.NotifierOK }
 
+// NotifierLookPath probes the toast backend binary. It is a variable
+// (not exec.LookPath inline) so tests stay hermetic on every OS:
+// unit tests point it at a stub, production leaves the default.
+var NotifierLookPath = exec.LookPath
+
 // CheckHealth inspects the plugin file, the AUMID registration, and the
 // notifier backend available on this OS.
 func CheckHealth(pluginsDir string, reg aumid.Registry) (HealthReport, error) {
-	return CheckHealthWithLookPath(pluginsDir, reg, exec.LookPath)
-}
-
-// CheckHealthWithLookPath is CheckHealth with an injectable binary
-// probe, so tests stay hermetic on any OS.
-func CheckHealthWithLookPath(pluginsDir string, reg aumid.Registry, lookPath func(string) (string, error)) (HealthReport, error) {
 	report := HealthReport{
 		PluginsDir: pluginsDir,
 		PluginPath: config.PluginPath(pluginsDir),
@@ -75,7 +74,7 @@ func CheckHealthWithLookPath(pluginsDir string, reg aumid.Registry, lookPath fun
 		report.AUMIDNote = "MISSING (" + detail + ")"
 	}
 
-	report.NotifierOK, report.NotifierNote = checkNotifier(runtime.GOOS, lookPath)
+	report.NotifierOK, report.NotifierNote = checkNotifier(runtime.GOOS, NotifierLookPath)
 
 	return report, nil
 }

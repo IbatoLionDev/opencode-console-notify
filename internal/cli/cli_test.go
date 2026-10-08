@@ -7,6 +7,7 @@ import (
 
 	"github.com/IbatoLionDev/opencode-console-notify/internal/aumid"
 	"github.com/IbatoLionDev/opencode-console-notify/internal/config"
+	"github.com/IbatoLionDev/opencode-console-notify/internal/doctor"
 )
 
 const pluginsDirFlag = "--plugins-dir"
@@ -74,6 +75,11 @@ func TestParseArgs(t *testing.T) {
 }
 
 func TestRunDoctorEndToEnd(t *testing.T) {
+	// Hermetic backend probe: the machine PATH must never flip this test.
+	old := doctor.NotifierLookPath
+	doctor.NotifierLookPath = func(string) (string, error) { return "/bin/notify-send", nil }
+	t.Cleanup(func() { doctor.NotifierLookPath = old })
+
 	plugins := t.TempDir()
 	reg := &aumid.FakeRegistry{}
 	var out, errOut bytes.Buffer
