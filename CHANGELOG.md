@@ -3,6 +3,15 @@
 All notable changes to this project are documented here, newest first.
 Version headers link to the GitHub release when one exists.
 
+## [3.1.0] - 2026-10-08
+
+### Added
+
+- Fullscreen TUI on Linux consoles: raw termios input plus window size
+  via ioctl, stdlib only. The TUI is identical to Windows — same views,
+  keys, hover, click and wheel (mouse needs an xterm-compatible
+  terminal); pipes and scripts keep the line mode on every OS.
+
 ## [3.0.0] - 2026-10-08
 
 ### Added

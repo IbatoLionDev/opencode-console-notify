@@ -3,4 +3,4 @@
 package version
 
 // Version is the CLI version shown by the version command and upgrade.
-const Version = "3.0.0"
+const Version = "3.1.0"
