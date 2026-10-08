@@ -3,6 +3,18 @@
 All notable changes to this project are documented here, newest first.
 Version headers link to the GitHub release when one exists.
 
+## [3.0.0] - Unreleased
+
+### Added
+
+- Linux support with the line-mode TUI: notifications via `notify-send`
+  (silent skip when `libnotify-bin` is missing, `doctor` reports it),
+  installs without a registry (the identity is the app name), a fourth
+  install path (`install.sh`, `curl | sh`), per-OS `upgrade`/`doctor`
+  output, and an `ubuntu-latest` CI runtime covering the Linux install.
+  The fullscreen TUI stays Windows-only for now and arrives on Linux
+  in 3.1.0; Linux consoles run the line mode automatically.
+
 ## [2.3.0] - 2026-10-06
 
 ### Added

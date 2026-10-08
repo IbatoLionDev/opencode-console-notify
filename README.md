@@ -2,7 +2,7 @@
 
 ![opencode-console-notify banner](public/opencode-console-notify-banner.png)
 
-Native Windows toast notifications for OpenCode — know when the agent finishes, errors, or needs you, without watching the terminal.
+Native desktop toast notifications for OpenCode — know when the agent finishes, errors, or needs you, without watching the terminal. Windows notifies via WinRT toasts, Linux via `notify-send` (needs `libnotify-bin`).
 
 ## What it notifies
 
@@ -19,33 +19,44 @@ notify, even from children, because they stop all progress until answered.
 
 ## Requirements
 
-- Windows 10 or 11
 - OpenCode
-- No administrator rights needed (everything is registered per-user in HKCU)
+- Windows 10 or 11, or Linux with `notify-send` (`libnotify-bin`) for toasts
+- No administrator rights needed (Windows registers per-user in HKCU; Linux needs no registration)
 
 ## Install
 
-Three independent paths — pick any one. Each path registers the Windows notification
-identity (AUMID) itself, so there are no manual registry steps.
+Four independent paths — pick any one. Each path installs the plugin
+itself; Windows also registers the notification identity (AUMID), which
+Linux does not need.
 
-### PowerShell (one line)
+### PowerShell (Windows, one line)
 
 ```powershell
 irm https://raw.githubusercontent.com/IbatoLionDev/opencode-console-notify/main/install.ps1 | iex
 ```
 
+### Shell (Linux, one line)
+
+```sh
+curl -fsSL https://raw.githubusercontent.com/IbatoLionDev/opencode-console-notify/main/install.sh | sh
+```
+
 ### Go CLI binary
 
-1. Download `opencode-notify.exe` from the [GitHub Releases page](https://github.com/IbatoLionDev/opencode-console-notify/releases).
+1. Download `opencode-notify.exe` (Windows) or `opencode-notify-linux` (Linux) from the [GitHub Releases page](https://github.com/IbatoLionDev/opencode-console-notify/releases).
 2. Run:
 
 ```powershell
 opencode-notify.exe install
 ```
 
+```sh
+./opencode-notify-linux install
+```
+
 ### npm / npx (no Go needed)
 
-Zero-dependency, Windows-only:
+Zero-dependency, Windows and Linux:
 
 ```powershell
 npm i -g opencode-console-notify
@@ -113,6 +124,12 @@ Skips the local-checkout file and always downloads fresh bytes from GitHub,
 then installs exactly like a fresh install (same atomic write, AUMID
 registration, and hash output). `-Uninstall` wins when both are set.
 
+```sh
+./install.sh --upgrade
+```
+
+Same as above for Linux (no identity step there).
+
 ```powershell
 opencode-notify.exe upgrade
 ```
@@ -134,7 +151,8 @@ Opens an interactive TUI (English/Spanish) with language, update, info,
 alerts, and customs. On a real console it renders fullscreen with keyboard
 navigation (j/k/arrows, Enter, Space) plus mouse (hover highlights, click
 selects/activates, wheel scrolls); on pipes and scripts the line mode
-runs instead. Language applies to the TUI and the default notification texts.
+runs instead. On Linux the line mode runs for now (fullscreen arrives in
+3.1.0). Language applies to the TUI and the default notification texts.
 Alerts lists the four default events with their triggers; Space toggles each
 one and the plugin honors it on the next event. Every view prints its keys
 in a visible footer. For scripts:
