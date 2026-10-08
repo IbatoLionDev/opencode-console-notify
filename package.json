@@ -27,7 +27,8 @@
     "LICENSE.md"
   ],
   "os": [
-    "win32"
+    "win32",
+    "linux"
   ],
   "engines": {
     "node": ">=18"
