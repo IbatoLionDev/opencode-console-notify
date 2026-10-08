@@ -5,6 +5,7 @@ package cli
 import (
 	"fmt"
 	"io"
+	"runtime"
 
 	"github.com/IbatoLionDev/opencode-console-notify/internal/aumid"
 	"github.com/IbatoLionDev/opencode-console-notify/internal/config"
@@ -18,11 +19,13 @@ const usageText = `Usage: opencode-notify [--plugins-dir DIR] <command>
 
 Commands:
   install     Copy the embedded plugin into the plugins directory and
-              register the OpenCode.Notifier AUMID (HKCU, no admin).
-  uninstall   Remove the plugin file and the AUMID key only.
-  doctor      Verify the install end state (plugin file + AUMID).
-              Exit 0 when healthy, 1 when something is missing.
-  test        Send a real Windows toast notification.
+              register the notifier identity (AUMID on Windows, app
+              name on Linux; per-user, no admin).
+  uninstall   Remove the plugin file and the notifier identity only.
+  doctor      Verify the install end state (plugin file + identity +
+              notifier backend). Exit 0 when healthy, 1 when
+              something is missing.
+  test        Send a real test notification.
   upgrade     Reinstall the plugin from the embedded copy and verify.
               Newer binaries come from the GitHub Releases page.
   config      Open the config TUI (language, update, info, alerts,
@@ -42,6 +45,15 @@ Options:
 const releasesURL = "https://github.com/IbatoLionDev/opencode-console-notify/releases"
 
 const errorFormat = "Error: %s\n"
+
+// testViaName names the delivery backend in the test command output
+// for one OS.
+func testViaName(goos string) string {
+	if goos == "linux" {
+		return "notify-send"
+	}
+	return aumid.AUMID
+}
 
 // Run executes the CLI; it returns the process exit code so tests can
 // assert on it without spawning a subprocess.
@@ -86,7 +98,7 @@ func Run(args []string, reg aumid.Registry, stdout, stderr io.Writer) int {
 			fmt.Fprintf(stderr, errorFormat, err)
 			return 1
 		}
-		fmt.Fprintf(stdout, "Sent test notification via %s.\n", aumid.AUMID)
+		fmt.Fprintf(stdout, "Sent test notification via %s.\n", testViaName(runtime.GOOS))
 		return 0
 	case "upgrade":
 		fmt.Fprintf(stdout, "Upgrading with embedded copy (version %s)...\n", version.Version)

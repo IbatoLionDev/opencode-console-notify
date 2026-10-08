@@ -6,6 +6,7 @@ package doctor
 import (
 	"fmt"
 	"io"
+	"runtime"
 
 	"github.com/IbatoLionDev/opencode-console-notify/internal/aumid"
 )
@@ -20,17 +21,30 @@ func Doctor(pluginsDir string, reg aumid.Registry, out io.Writer) int {
 	}
 
 	fmt.Fprintf(out, "Plugin file: %s\n", report.PluginNote)
-	fmt.Fprintf(out, "AUMID registration: %s\n", report.AUMIDNote)
-	code := printVerdict(out, report.Healthy())
+	fmt.Fprintf(out, "%s: %s\n", identityLabel(runtime.GOOS), report.AUMIDNote)
+	fmt.Fprintf(out, "Notifier: %s\n", report.NotifierNote)
+	code := printVerdict(out, runtime.GOOS, report.Healthy())
 	maybePrintUpdateNotice(out)
 	return code
 }
 
+// identityLabel names the identity half of the report for one OS.
+func identityLabel(goos string) string {
+	if goos == "windows" {
+		return "AUMID registration"
+	}
+	return "Identity"
+}
+
 // printVerdict prints the healthy/issues verdict lines and returns the
 // matching exit code.
-func printVerdict(out io.Writer, healthy bool) int {
+func printVerdict(out io.Writer, goos string, healthy bool) int {
 	if healthy {
-		fmt.Fprintf(out, "Healthy: plugin installed and AUMID registered.\n")
+		if goos == "windows" {
+			fmt.Fprintf(out, "Healthy: plugin installed and AUMID registered.\n")
+		} else {
+			fmt.Fprintf(out, "Healthy: plugin installed and notifier ready.\n")
+		}
 		return 0
 	}
 	fmt.Fprintf(out, "Issues found: run \"opencode-notify install\" to fix.\n")
