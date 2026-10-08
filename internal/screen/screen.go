@@ -1,7 +1,9 @@
 // Package screen owns the fullscreen TUI primitives: palette, frame
 // rendering, viewport scrolling, and ANSI key parsing. All rendering is
 // pure string building (stdlib only); console setup lives behind the
-// windows/other build split so the package compiles everywhere.
+// windows/linux/other build split so the package compiles everywhere.
+// The TUI above this package is identical on every console: same views,
+// keys, mouse and palette.
 package screen
 
 import (
