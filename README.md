@@ -252,21 +252,31 @@ or re-run the PowerShell script with `-Uninstall`.
 
 ## Troubleshooting
 
-- **No notifications** — run `opencode-notify.exe doctor`; it reports exactly what is
-  missing (plugin file or AUMID registration).
-- **Manual AUMID check** — the identity lives at
+- **No notifications** — run `doctor` (`opencode-notify.exe doctor` on
+  Windows, `./opencode-notify-linux doctor` or `opencode-console-notify doctor`
+  on Linux); it reports exactly what is missing. On Linux a missing
+  `notify-send` (`libnotify-bin`) means toasts are skipped silently.
+- **Manual identity check (Windows)** — the identity lives at
   `HKCU\Software\Classes\AppUserModelId\OpenCode.Notifier`
-  (`DisplayName=OpenCode`). Both installers manage it; you should never need to
-  touch it by hand.
+  (`DisplayName=OpenCode`). Both Windows installers manage it; you should
+  never need to touch it by hand. Linux needs no registration.
 - **Focus Assist / Do Not Disturb** — Windows silently suppresses toasts while these
   are enabled. Check Settings > System > Notifications.
 - **Debug log** — the plugin writes debug info to
-  `%TEMP%\opencode-console-notify.debug.log`.
+  `%TEMP%\opencode-console-notify.debug.log` on Windows,
+  `$TMPDIR/opencode-console-notify.debug.log` (else `/tmp`) on Linux.
 
 ## Scope / roadmap
 
-v1 is Windows-only. macOS and Linux are not supported yet; they are tracked on the
-roadmap and contributions are welcome.
+Supported today: **Windows 10/11 and Linux**. Same plugin events,
+settings and config TUI on both (fullscreen included); Windows notifies
+via WinRT toasts with the per-user AUMID identity, Linux via
+`notify-send` with the app name. The mouse needs an xterm-compatible
+terminal; dumb terminals keep full keyboard support.
+
+Not supported yet: **macOS** (needs `console_darwin.go`, an
+`osascript`/native backend and a no-op identity like Linux) and rich
+notification-center actions (buttons, images). Contributions welcome.
 
 ## License
 
