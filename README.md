@@ -4,6 +4,12 @@
 
 Native desktop toast notifications for OpenCode — know when the agent finishes, errors, or needs you, without watching the terminal. Windows notifies via WinRT toasts, Linux via `notify-send` (needs `libnotify-bin`).
 
+The config TUI is identical on both platforms: fullscreen with keyboard
+(j/k/arrows, Enter, Space) plus mouse (hover highlights, click
+selects/activates, wheel scrolls). On Linux it needs a real console and
+an xterm-compatible terminal for the mouse; pipes and scripts run the
+line mode everywhere.
+
 ## What it notifies
 
 | Event | Meaning |
@@ -20,7 +26,8 @@ notify, even from children, because they stop all progress until answered.
 ## Requirements
 
 - OpenCode
-- Windows 10 or 11, or Linux with `notify-send` (`libnotify-bin`) for toasts
+- Windows 10 or 11, or Linux (any ANSI console; mouse needs an xterm-compatible terminal)
+- `notify-send` (`libnotify-bin`) on Linux for toasts
 - No administrator rights needed (Windows registers per-user in HKCU; Linux needs no registration)
 
 ## Install
@@ -150,9 +157,9 @@ opencode-notify.exe config
 Opens an interactive TUI (English/Spanish) with language, update, info,
 alerts, and customs. On a real console it renders fullscreen with keyboard
 navigation (j/k/arrows, Enter, Space) plus mouse (hover highlights, click
-selects/activates, wheel scrolls); on pipes and scripts the line mode
-runs instead. On Linux the line mode runs for now (fullscreen arrives in
-3.1.0). Language applies to the TUI and the default notification texts.
+selects/activates, wheel scrolls) — identical on Windows and Linux; on
+pipes and scripts the line mode runs instead. Language applies to the
+TUI and the default notification texts.
 Alerts lists the four default events with their triggers; Space toggles each
 one and the plugin honors it on the next event. Every view prints its keys
 in a visible footer. For scripts:
