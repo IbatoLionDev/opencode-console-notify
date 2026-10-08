@@ -5,6 +5,7 @@ import (
 	"errors"
 	"os"
 	"path/filepath"
+	"runtime"
 	"strings"
 	"testing"
 
@@ -45,7 +46,13 @@ func TestInstallWritesEmbeddedPluginAtomically(t *testing.T) {
 	if !reg.Registered {
 		t.Fatal("Install did not register the AUMID")
 	}
-	for _, want := range []string{"Installed:", "SHA256:", "AUMID:"} {
+	// The identity line names the HKCU key on Windows, the app name
+	// everywhere else (see identityInstalledLine).
+	wantID := "AUMID:"
+	if runtime.GOOS != "windows" {
+		wantID = "Identity:"
+	}
+	for _, want := range []string{"Installed:", "SHA256:", wantID} {
 		if !strings.Contains(out.String(), want) {
 			t.Fatalf("install output missing %q:\n%s", want, out.String())
 		}

@@ -2,6 +2,7 @@ package config
 
 import (
 	"path/filepath"
+	"runtime"
 	"strings"
 	"testing"
 )
@@ -13,18 +14,22 @@ func TestResolvePluginsDir(t *testing.T) {
 	}
 
 	tests := []struct {
-		name     string
-		override string
-		want     string
-		wantErr  bool
+		name        string
+		override    string
+		want        string
+		wantErr     bool
+		windowsOnly bool // backslash paths only clean on Windows
 	}{
 		{name: "empty override falls back to default", override: "", want: def},
 		{name: "blank override falls back to default", override: "   ", want: def},
-		{name: "explicit dir wins", override: `C:\temp\ocn\plugins`, want: `C:\temp\ocn\plugins`},
-		{name: "explicit dir is cleaned", override: `C:\temp\ocn\sub\..\plugins`, want: `C:\temp\ocn\plugins`},
+		{name: "explicit dir wins", override: `C:\temp\ocn\plugins`, want: `C:\temp\ocn\plugins`, windowsOnly: true},
+		{name: "explicit dir is cleaned", override: `C:\temp\ocn\sub\..\plugins`, want: `C:\temp\ocn\plugins`, windowsOnly: true},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			if tt.windowsOnly && runtime.GOOS != "windows" {
+				t.Skip("backslash separators only exist on Windows")
+			}
 			got, err := ResolvePluginsDir(tt.override)
 			if tt.wantErr && err == nil {
 				t.Fatal("expected error, got nil")

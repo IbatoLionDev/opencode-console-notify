@@ -7,16 +7,23 @@ import (
 	"github.com/IbatoLionDev/opencode-console-notify/internal/aumid"
 )
 
-func stubLookPath(path string, err error) func(string) (string, error) {
-	return func(string) (string, error) { return path, err }
+// stubNotifier points the backend probe at a fixed result for one test.
+// Tests must never depend on the machine PATH: a Linux box without
+// notify-send (or Windows without PowerShell on PATH) would flip them.
+func stubNotifier(t *testing.T, path string, err error) {
+	t.Helper()
+	old := NotifierLookPath
+	NotifierLookPath = func(string) (string, error) { return path, err }
+	t.Cleanup(func() { NotifierLookPath = old })
 }
 
 func TestNotifierPresentKeepsHealthWhole(t *testing.T) {
+	stubNotifier(t, "/usr/bin/notify-send", nil)
 	plugins := t.TempDir()
 	reg := &aumid.FakeRegistry{Registered: true, DisplayName: aumid.AUMIDDisplayName}
 	seedPluginFileForHealth(t, plugins, true, false)
 
-	report, err := CheckHealthWithLookPath(plugins, reg, stubLookPath("/usr/bin/notify-send", nil))
+	report, err := CheckHealth(plugins, reg)
 	if err != nil {
 		t.Fatalf("CheckHealth failed: %v", err)
 	}
@@ -26,11 +33,12 @@ func TestNotifierPresentKeepsHealthWhole(t *testing.T) {
 }
 
 func TestNotifierMissingFailsHealthWithHint(t *testing.T) {
+	stubNotifier(t, "", errors.New("not found"))
 	plugins := t.TempDir()
 	reg := &aumid.FakeRegistry{Registered: true, DisplayName: aumid.AUMIDDisplayName}
 	seedPluginFileForHealth(t, plugins, true, false)
 
-	report, err := CheckHealthWithLookPath(plugins, reg, stubLookPath("", errors.New("not found")))
+	report, err := CheckHealth(plugins, reg)
 	if err != nil {
 		t.Fatalf("CheckHealth failed: %v", err)
 	}
