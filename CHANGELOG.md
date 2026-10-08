@@ -3,6 +3,15 @@
 All notable changes to this project are documented here, newest first.
 Version headers link to the GitHub release when one exists.
 
+## [3.1.1] - 2026-10-08
+
+### Fixed
+
+- The npm `upgrade` no longer prints Node's DEP0190 warning on Windows:
+  the `.cmd` shim still needs a shell, so it now receives one
+  pre-quoted command string (constant-only tokens) instead of an
+  unescaped args array. POSIX behavior is unchanged.
+
 ## [3.1.0] - 2026-10-08
 
 ### Added
