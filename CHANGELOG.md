@@ -3,6 +3,17 @@
 All notable changes to this project are documented here, newest first.
 Version headers link to the GitHub release when one exists.
 
+## [3.2.0] - 2026-10-15
+
+### Added
+
+- Event picker search: typing filters the 48-event catalog by strict
+  contiguous substring (case-insensitive) over the type or description,
+  from any position. Backspace trims, `q` types instead of quitting,
+  `Esc` clears the filter first and backs out second, `Space`/`Enter`
+  still pick and wheel/click work on the filtered rows. Identical on
+  Windows and Linux, Go and Node.
+
 ## [3.1.1] - 2026-10-08
 
 ### Fixed
