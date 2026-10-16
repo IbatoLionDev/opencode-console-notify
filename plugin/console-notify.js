@@ -1,7 +1,7 @@
 /**
- * console-notify — native Windows toast notifications for the OpenCode console.
+ * console-notify — native toast notifications for the OpenCode console.
  *
- * Fires a Windows notification when:
+ * Fires a notification when:
  *   session.idle      -> main session finished a turn and is waiting for input
  *   session.error     -> session hit an error
  *   permission.asked  -> OpenCode is blocked waiting for a permission answer
@@ -16,16 +16,33 @@
  * auto-registered on load in HKCU\Software\Classes\AppUserModelId
  * (HKCU only, no admin rights needed). Manual registration of that key
  * remains a valid fallback if auto-registration is ever blocked.
+ *
+ * Entrypoint (dual V1/V2, no plugin SDK import needed):
+ *   export default { id: "console-notify", server, setup }
+ * OpenCode V1 (1.18.29+) calls `server()` and receives the `{ event }`
+ * hook; OpenCode V2 calls `setup(ctx)` and the plugin subscribes to
+ * `ctx.event` itself. V2 events carry their payload in `event.data`
+ * (V1 used `event.properties`); the dispatcher accepts both.
+ *
+ * Process spawning uses `node:child_process` only, so the module loads
+ * with or without a `Bun` global in the host.
  */
 
+import { spawn, spawnSync } from "node:child_process"
 import { appendFileSync, readFileSync } from "node:fs"
 import { basename, join } from "node:path"
 import { homedir } from "node:os"
 
+const PLUGIN_ID = "console-notify"
 const AUMID = "OpenCode.Notifier"
 const COOLDOWN_MS = 4000
 const MAX_LINE = 160
 const DEBUG_LOG = join(process.env.TEMP || process.env.TMP || process.env.TMPDIR || (process.platform === "win32" ? "." : "/tmp"), "opencode-console-notify.debug.log")
+
+// V2 closes the event stream when the server restarts; reconnect with a
+// bounded doubling delay that resets once events flow again.
+const EVENT_RETRY_MIN_MS = 50
+const EVENT_RETRY_MAX_MS = 5000
 
 // Config file written by the config command (v2.0.0, customs since 2.2).
 // Missing or corrupt means v1 behavior: everything on, English.
@@ -90,11 +107,23 @@ function dbg(message) {
 // which is what made a maximized console vanish on every notification.
 // With CREATE_NO_WINDOW the child gets its own console with no window, so
 // there is nothing to flash and nothing shared to hide.
-function spawnHiddenPowerShell(encoded) {
-  return Bun.spawn(
-    ["powershell.exe", "-NoProfile", "-NonInteractive", "-EncodedCommand", encoded],
-    { stdin: "ignore", stdout: "ignore", stderr: "ignore", windowsHide: true },
-  )
+function spawnHiddenPowerShell(encoded, tag) {
+  try {
+    const child = spawn(
+      "powershell.exe",
+      ["-NoProfile", "-NonInteractive", "-EncodedCommand", encoded],
+      { stdio: "ignore", windowsHide: true },
+    )
+    child.on("error", (err) => dbg(`spawn FAIL tag=${tag} err=${String(err?.message ?? err)}`))
+    child.on("exit", (code) => {
+      if (code !== 0) dbg(`spawn FAIL tag=${tag} exit=${code}`)
+    })
+    if (typeof child.unref === "function") child.unref()
+    return child
+  } catch (err) {
+    dbg(`spawn THREW tag=${tag} err=${String(err?.message ?? err)}`)
+    return undefined
+  }
 }
 
 /**
@@ -111,20 +140,13 @@ function ensureAumidRegistered() {
     `$d = Get-ItemProperty -LiteralPath '${key}' -Name DisplayName -ErrorAction SilentlyContinue`,
     `if ($null -eq $d) { Set-ItemProperty -LiteralPath '${key}' -Name DisplayName -Value 'OpenCode' -Type String }`,
   ].join("\n")
-  // UTF-16LE base64 avoids every shell-quoting pitfall between Bun and PowerShell.
+  // UTF-16LE base64 avoids every shell-quoting pitfall for the command line.
   const encoded = Buffer.from(script, "utf16le").toString("base64")
-  try {
-    const proc = spawnHiddenPowerShell(encoded)
-    Promise.resolve(proc.exited).then(
-      (code) => {
-        if (code !== 0) dbg(`aumid FAIL key=${key} exit=${code}`)
-        else dbg(`aumid OK key=${key}`)
-      },
-      (err) => dbg(`aumid FAIL key=${key} err=${String(err?.message ?? err)}`),
-    )
-  } catch (err) {
-    dbg(`aumid THREW key=${key} err=${String(err?.message ?? err)}`)
-  }
+  const child = spawnHiddenPowerShell(encoded, "aumid-register")
+  if (!child) return
+  child.on("exit", (code) => {
+    if (code === 0) dbg(`aumid OK key=${key}`)
+  })
 }
 ensureAumidRegistered()
 
@@ -168,7 +190,8 @@ let notifySendChecked = null
 function notifySendAvailable() {
   if (notifySendChecked !== null) return notifySendChecked
   try {
-    notifySendChecked = Boolean(Bun.which("notify-send"))
+    const probed = spawnSync("notify-send", ["--version"], { stdio: "ignore", windowsHide: true, timeout: 5000 })
+    notifySendChecked = !probed.error && probed.status === 0
   } catch {
     notifySendChecked = false
   }
@@ -185,16 +208,16 @@ function sendToastLinux(title, lines, tag) {
   }
   const body = [...lines].filter(Boolean).join("\n")
   try {
-    const proc = Bun.spawn(
-      ["notify-send", "--app-name=OpenCode", "--urgency=normal", "--expire-time=8000", title, body],
-      { stdin: "ignore", stdout: "ignore", stderr: "ignore" },
+    const child = spawn(
+      "notify-send",
+      ["--app-name=OpenCode", "--urgency=normal", "--expire-time=8000", title, body],
+      { stdio: "ignore", windowsHide: true },
     )
-    Promise.resolve(proc.exited).then(
-      (code) => {
-        if (code !== 0) dbg(`toast FAIL tag=${tag} exit=${code}`)
-      },
-      (err) => dbg(`toast FAIL tag=${tag} err=${String(err?.message ?? err)}`),
-    )
+    child.on("error", (err) => dbg(`toast FAIL tag=${tag} err=${String(err?.message ?? err)}`))
+    child.on("exit", (code) => {
+      if (code !== 0) dbg(`toast FAIL tag=${tag} exit=${code}`)
+    })
+    if (typeof child.unref === "function") child.unref()
   } catch (err) {
     dbg(`toast THREW tag=${tag} err=${String(err?.message ?? err)}`)
   }
@@ -215,32 +238,24 @@ function sendToast(title, lines, tag) {
     "$t.Group = 'opencode'",
     `[Windows.UI.Notifications.ToastNotificationManager]::CreateToastNotifier('${AUMID}').Show($t)`,
   ].join("\n")
-  // UTF-16LE base64 avoids every shell-quoting pitfall between Bun and PowerShell.
+  // UTF-16LE base64 avoids every shell-quoting pitfall for the command line.
   const encoded = Buffer.from(script, "utf16le").toString("base64")
-  try {
-    const proc = spawnHiddenPowerShell(encoded)
-    Promise.resolve(proc.exited).then(
-      (code) => {
-        if (code !== 0) dbg(`toast FAIL tag=${tag} exit=${code}`)
-      },
-      (err) => dbg(`toast FAIL tag=${tag} err=${String(err?.message ?? err)}`),
-    )
-  } catch (err) {
-    dbg(`toast THREW tag=${tag} err=${String(err?.message ?? err)}`)
-  }
+  spawnHiddenPowerShell(encoded, tag)
 }
 
-export default async ({ client, $, directory }) => {
+// Shared notification pipeline: both entrypoints (V1 `server`, V2 `setup`)
+// feed (eventType, payload) here. `getSession(sessionID)` resolves a
+// session or throws/returns undefined when it cannot be read.
+function createPipeline({ getSession, directory }) {
   const projectName = directory ? basename(directory) : ""
   const title = projectName ? `OpenCode \u00b7 ${projectName}` : "OpenCode"
-  dbg(`LOADED directory=${directory ?? "(none)"} title="${title}" has$=${typeof $}`)
 
   const isChild = async (sessionID) => {
     if (!sessionID) return false
     if (childCache.has(sessionID)) return childCache.get(sessionID)
     let child = false
     try {
-      const res = await client.session.get({ path: { id: sessionID } })
+      const res = await getSession(sessionID)
       const session = res?.data ?? res
       child = Boolean(session?.parentID)
     } catch {
@@ -311,31 +326,113 @@ export default async ({ client, $, directory }) => {
     }
   }
 
+  const dispatch = async (type, payload) => {
+    try {
+      const p = payload ?? {}
+      if (type === "session.idle") {
+        await handleIdle(p)
+        return handleCustoms(type, p)
+      }
+      if (type === "session.error") {
+        await handleError(p)
+        return handleCustoms(type, p)
+      }
+      if (type === "permission.asked") {
+        handlePermission(p)
+        return handleCustoms(type, p)
+      }
+      if (type === "question.asked") {
+        handleQuestion(p)
+        return handleCustoms(type, p)
+      }
+      return handleCustoms(type, p)
+    } catch (err) {
+      // Notifications must never break the event pipeline.
+      dbg(`EVENT handler error type=${type} err=${String(err?.message ?? err)}`)
+    }
+  }
+
+  return { dispatch, title }
+}
+
+// OpenCode V1 entrypoint (1.18.29+ calls `server()` on definition objects).
+async function server({ client, directory }) {
+  const pipeline = createPipeline({
+    directory,
+    getSession: (sessionID) => client.session.get({ path: { id: sessionID } }),
+  })
+  dbg(`LOADED runtime=v1 directory=${directory ?? "(none)"} title="${pipeline.title}"`)
+
   return {
     event: async ({ event }) => {
-      try {
-        const p = event.properties ?? {}
-        if (event.type === "session.idle") {
-          await handleIdle(p)
-          return handleCustoms(event.type, p)
-        }
-        if (event.type === "session.error") {
-          await handleError(p)
-          return handleCustoms(event.type, p)
-        }
-        if (event.type === "permission.asked") {
-          handlePermission(p)
-          return handleCustoms(event.type, p)
-        }
-        if (event.type === "question.asked") {
-          handleQuestion(p)
-          return handleCustoms(event.type, p)
-        }
-        return handleCustoms(event.type, p)
-      } catch (err) {
-        // Notifications must never break the event pipeline.
-        dbg(`EVENT handler error type=${event?.type} err=${String(err?.message ?? err)}`)
-      }
+      const payload = event?.properties ?? {}
+      return pipeline.dispatch(event?.type, payload)
     },
   }
 }
+
+function delayUnlessAborted(ms, signal) {
+  return new Promise((resolve) => {
+    if (signal.aborted) return resolve()
+    const done = () => {
+      clearTimeout(timer)
+      signal.removeEventListener("abort", done)
+      resolve()
+    }
+    const timer = setTimeout(done, ms)
+    signal.addEventListener("abort", done, { once: true })
+  })
+}
+
+// OpenCode V2 entrypoint: subscribe to the server event stream and feed
+// the shared pipeline. V2 events carry the payload in `event.data`.
+async function setup(ctx) {
+  const directory = ctx.location.directory
+  const pipeline = createPipeline({
+    directory,
+    // V1 SDK results carry `{ data, error }`; the V2 client throws instead.
+    getSession: (sessionID) => ctx.session.get({ sessionID }),
+  })
+  dbg(`LOADED runtime=v2 id=${PLUGIN_ID} directory=${directory ?? "(none)"} title="${pipeline.title}"`)
+
+  const abort = new AbortController()
+  let listening = Promise.resolve()
+  const cleanup = async () => {
+    abort.abort()
+    await listening
+  }
+
+  try {
+    listening = (async () => {
+      let retryMs = EVENT_RETRY_MIN_MS
+      while (!abort.signal.aborted) {
+        try {
+          for await (const event of ctx.event.subscribe({ signal: abort.signal })) {
+            if (abort.signal.aborted) break
+            // Every subscription opens with a server.connected handshake; only a
+            // real event proves the stream is healthy enough to reset the backoff.
+            if (event?.type !== "server.connected") retryMs = EVENT_RETRY_MIN_MS
+            const payload = event?.data ?? event?.properties ?? {}
+            await pipeline.dispatch(event?.type, payload)
+          }
+        } catch {
+          // The stream ends or throws when the server restarts; events missed
+          // while disconnected are lost, so reconnect below.
+        }
+        if (abort.signal.aborted) break
+        await delayUnlessAborted(retryMs, abort.signal)
+        retryMs = Math.min(retryMs * 2, EVENT_RETRY_MAX_MS)
+      }
+    })()
+  } catch (cause) {
+    await cleanup()
+    throw cause
+  }
+
+  return cleanup
+}
+
+// V1 (1.18.29+) calls server(); V2 calls setup(). Kept as the single
+// default export on purpose: older V1 loaders call every exported
+// function as a plugin factory, so no named exports.
+export default { id: PLUGIN_ID, server, setup }

@@ -3,6 +3,19 @@
 All notable changes to this project are documented here, newest first.
 Version headers link to the GitHub release when one exists.
 
+## [3.2.1] - 2026-10-16
+
+### Fixed
+
+- OpenCode 2.x support: the plugin now default-exports a definition with an
+  `id` plus `setup`/`server` entrypoints, so the 2.0 loader error
+  (`Plugin must export a default definition with an id and an effect or
+  setup function`) is gone. On V2, events arrive via a `ctx.event`
+  subscription with reconnect backoff; V1 keeps its `event` hook, and
+  payloads accept `event.data` or `event.properties`. Process spawning moved
+  from the `Bun` global to `node:child_process`, so the module loads with or
+  without it. No behavior, message, flag, or exit-code changes otherwise.
+
 ## [3.2.0] - 2026-10-15
 
 ### Added
