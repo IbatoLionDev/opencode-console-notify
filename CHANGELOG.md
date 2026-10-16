@@ -3,6 +3,25 @@
 All notable changes to this project are documented here, newest first.
 Version headers link to the GitHub release when one exists.
 
+## [3.2.2] - 2026-10-16
+
+### Fixed
+
+- Notifications fire again on OpenCode 2.x: the V1 event names
+  (`session.idle`, `session.error`, `question.asked`) do not exist on the
+  V2 event stream, so the plugin now listens to their V2 counterparts
+  (`session.execution.succeeded` / `.failed` / `.interrupted`,
+  `permission.asked`, `form.created`), with the same child-session rule
+  and cooldowns. Error toasts carry `error.message`; question toasts carry
+  the form title. One execution notifies at most once (started clears,
+  succeeded/failed/interrupted are terminal); answered prompts re-notify
+  when asked again.
+- Custom notifications catalog refreshed to the 68 real V2 event names
+  (the 48 V1 names never fire on V2): customs bound to removed V1 names
+  stay inert — re-pick them from `config --list-events`. Toggle aliases
+  accept the new names too (`session.execution.succeeded`,
+  `session.execution.failed`, `form.created`).
+
 ## [3.2.1] - 2026-10-16
 
 ### Fixed
