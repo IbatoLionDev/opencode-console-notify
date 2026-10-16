@@ -25,7 +25,7 @@ notify, even from children, because they stop all progress until answered.
 
 ## Requirements
 
-- OpenCode
+- OpenCode 1.18.29+ or 2.x
 - Windows 10 or 11, or Linux (any ANSI console; mouse needs an xterm-compatible terminal)
 - `notify-send` (`libnotify-bin`) on Linux for toasts
 - No administrator rights needed (Windows registers per-user in HKCU; Linux needs no registration)
