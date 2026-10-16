@@ -7,12 +7,12 @@ import (
 
 // Shared fixtures so string literals are defined once.
 const (
-	testSessionIdleEvent = "session.idle"
+	testSessionDoneEvent = "session.execution.succeeded"
 	testMissingEvent     = "nope.missing"
 )
 
 func TestCatalogHasDefaults(t *testing.T) {
-	for _, want := range []string{testSessionIdleEvent, "session.error", "permission.asked", "question.asked"} {
+	for _, want := range []string{testSessionDoneEvent, "session.execution.failed", "permission.asked", "form.created"} {
 		if !IsKnownEvent(want) {
 			t.Fatalf("catalog misses default event %q", want)
 		}
@@ -30,16 +30,16 @@ func TestCatalogHasNoDuplicates(t *testing.T) {
 		}
 		seen[e.Type] = true
 	}
-	if len(seen) < 40 {
-		t.Fatalf("catalog shrank to %d events, want at least 40", len(seen))
+	if len(seen) < 60 {
+		t.Fatalf("catalog shrank to %d events, want at least 60", len(seen))
 	}
 }
 
 func TestEventDescription(t *testing.T) {
-	if got := EventDescription(testSessionIdleEvent, "es"); !strings.Contains(got, "esperando") {
+	if got := EventDescription(testSessionDoneEvent, "es"); !strings.Contains(got, "esperando") {
 		t.Fatalf("spanish description missing, got %q", got)
 	}
-	if got := EventDescription(testSessionIdleEvent, "fr"); got != EventDescription(testSessionIdleEvent, "en") {
+	if got := EventDescription(testSessionDoneEvent, "fr"); got != EventDescription(testSessionDoneEvent, "en") {
 		t.Fatalf("unknown lang must fall back to english, got %q", got)
 	}
 	if got := EventDescription(testMissingEvent, "en"); got != testMissingEvent {
@@ -48,12 +48,12 @@ func TestEventDescription(t *testing.T) {
 }
 
 func TestNoisySubset(t *testing.T) {
-	for _, want := range []string{"session.status", "message.part.updated", "file.watcher.updated", "tui.prompt.append"} {
+	for _, want := range []string{"session.reasoning.delta", "session.tool.progress", "session.usage.updated", "skill.updated"} {
 		if !IsNoisyEvent(want) {
 			t.Fatalf("event %q must be flagged noisy", want)
 		}
 	}
-	if IsNoisyEvent(testSessionIdleEvent) || IsNoisyEvent(testMissingEvent) {
+	if IsNoisyEvent(testSessionDoneEvent) || IsNoisyEvent(testMissingEvent) {
 		t.Fatal("quiet and unknown events must not be noisy")
 	}
 }

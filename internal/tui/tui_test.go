@@ -24,7 +24,7 @@ func TestRenderAlertsListsFourTriggers(t *testing.T) {
 	s := config.Defaults()
 	for _, lang := range []string{"en", "es"} {
 		out := RenderAlerts(&s, lang)
-		for _, want := range []string{"session.idle", "session.error", "permission.asked", "question.asked"} {
+		for _, want := range []string{"session.execution.succeeded", "session.execution.failed", "permission.asked", "form.created"} {
 			if !strings.Contains(out, want) {
 				t.Fatalf("lang %s alerts miss %q", lang, want)
 			}
@@ -106,7 +106,7 @@ func TestLineCustomsLifecycle(t *testing.T) {
 func TestAlertsShowsAndTogglesCustoms(t *testing.T) {
 	dir := t.TempDir()
 	s := config.Defaults()
-	if _, err := config.AddCustom(&s, "file.edited", "Build done", ""); err != nil {
+	if _, err := config.AddCustom(&s, "session.tool.success", "Build done", ""); err != nil {
 		t.Fatalf("seed failed: %v", err)
 	}
 	if err := config.Save(dir, s); err != nil {

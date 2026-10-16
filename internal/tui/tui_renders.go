@@ -55,10 +55,10 @@ func AllAlertItems(s *config.Settings, lang string) []AlertItem {
 // AlertItems returns the four default alerts in stable order.
 func AlertItems(s *config.Settings, lang string) []AlertItem {
 	return []AlertItem{
-		{Key: "1", Event: "session.idle", Name: i18n.T(lang, "alert.sessionIdle"), Trigger: i18n.T(lang, "trigger.sessionIdle"), Enabled: s.Alerts.SessionIdle, SettingPtr: &s.Alerts.SessionIdle},
-		{Key: "2", Event: "session.error", Name: i18n.T(lang, "alert.sessionError"), Trigger: i18n.T(lang, "trigger.sessionError"), Enabled: s.Alerts.SessionError, SettingPtr: &s.Alerts.SessionError},
+		{Key: "1", Event: "session.execution.succeeded", Name: i18n.T(lang, "alert.sessionIdle"), Trigger: i18n.T(lang, "trigger.sessionIdle"), Enabled: s.Alerts.SessionIdle, SettingPtr: &s.Alerts.SessionIdle},
+		{Key: "2", Event: "session.execution.failed", Name: i18n.T(lang, "alert.sessionError"), Trigger: i18n.T(lang, "trigger.sessionError"), Enabled: s.Alerts.SessionError, SettingPtr: &s.Alerts.SessionError},
 		{Key: "3", Event: "permission.asked", Name: i18n.T(lang, "alert.permissionAsked"), Trigger: i18n.T(lang, "trigger.permissionAsked"), Enabled: s.Alerts.PermissionAsked, SettingPtr: &s.Alerts.PermissionAsked},
-		{Key: "4", Event: "question.asked", Name: i18n.T(lang, "alert.questionAsked"), Trigger: i18n.T(lang, "trigger.questionAsked"), Enabled: s.Alerts.QuestionAsked, SettingPtr: &s.Alerts.QuestionAsked},
+		{Key: "4", Event: "form.created", Name: i18n.T(lang, "alert.questionAsked"), Trigger: i18n.T(lang, "trigger.questionAsked"), Enabled: s.Alerts.QuestionAsked, SettingPtr: &s.Alerts.QuestionAsked},
 	}
 }
 

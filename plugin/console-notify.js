@@ -1,13 +1,14 @@
 /**
  * console-notify — native toast notifications for the OpenCode console.
  *
- * Fires a notification when:
- *   session.idle      -> main session finished a turn and is waiting for input
- *   session.error     -> session hit an error
+ * Fires a notification when (V2 names; V1 names in parentheses):
+ *   session.execution.succeeded (session.idle) -> a run finished, waiting for input
+ *   session.execution.failed (session.error)  -> a run hit an error
+ *   session.execution.interrupted             -> a run was interrupted
  *   permission.asked  -> OpenCode is blocked waiting for a permission answer
- *   question.asked    -> OpenCode asked a question
+ *   form.created (question.asked) -> OpenCode asked a question
  *
- * Child (sub-agent) sessions are filtered out for idle/error so task
+ * Child (sub-agent) sessions are filtered out for completion/error so task
  * completions inside a run do not spam notifications. Blocking events
  * (permission/question) always notify, even from children, because they
  * stop all progress until answered.
@@ -84,12 +85,14 @@ const TEXTS = {
     error: "Something went wrong — check the console",
     permission: "Permission needed to continue",
     question: "OpenCode asked you a question",
+    interrupted: "Session done",
   },
   es: {
     idle: "Tarea terminada — esperando tu entrada",
     error: "Algo salió mal — revisa la consola",
     permission: "Permiso necesario para continuar",
     question: "OpenCode te hizo una pregunta",
+    interrupted: "Sesión terminada",
   },
 }
 
@@ -151,7 +154,18 @@ function ensureAumidRegistered() {
 ensureAumidRegistered()
 
 const lastSent = new Map()
-const childCache = new Map()
+// sessionCache: sessionID -> { isChild, projectID } for sessions already
+// resolved through the host. Failures are not cached: a session that is
+// temporarily unreadable is retried on the next event (fail open).
+const sessionCache = new Map()
+// terminalSessions: "done:<id>" / "failed:<id>" markers so one execution
+// notifies at most once (failed-then-succeeded, duplicate delivery).
+// session.execution.started clears them for the next execution.
+const terminalSessions = new Map()
+// askedForms / askedPermissions: prompt ids already notified and still
+// unanswered, so a re-asked prompt notifies again after reply/cancel.
+const askedForms = new Set()
+const askedPermissions = new Set()
 
 // XML 1.0 forbids C0/C1 controls and lone surrogates; one illegal character makes LoadXml throw and the toast is lost.
 function isXmlCodePointAllowed(cp) {
@@ -181,6 +195,15 @@ function truncate(value) {
   let end = MAX_LINE - 3
   if (end > 0 && text.charCodeAt(end) >= 0xdc00 && text.charCodeAt(end) <= 0xdfff) end -= 1
   return `${text.slice(0, end)}...`
+}
+
+// errorDetail extracts a one-line message from a V1 error string or a V2
+// SessionError object ({ message, ... }).
+function errorDetail(err) {
+  if (typeof err === "string") return truncate(err)
+  if (err && typeof err.message === "string" && err.message.trim() !== "") return truncate(err.message)
+  if (err && typeof err.name === "string" && err.name.trim() !== "") return truncate(err.name)
+  return ""
 }
 
 // notify-send availability is probed once: most desktops ship
@@ -218,6 +241,7 @@ function sendToastLinux(title, lines, tag) {
       if (code !== 0) dbg(`toast FAIL tag=${tag} exit=${code}`)
     })
     if (typeof child.unref === "function") child.unref()
+    dbg(`toast SENT tag=${tag} title="${title}"`)
   } catch (err) {
     dbg(`toast THREW tag=${tag} err=${String(err?.message ?? err)}`)
   }
@@ -240,29 +264,57 @@ function sendToast(title, lines, tag) {
   ].join("\n")
   // UTF-16LE base64 avoids every shell-quoting pitfall for the command line.
   const encoded = Buffer.from(script, "utf16le").toString("base64")
-  spawnHiddenPowerShell(encoded, tag)
+  if (spawnHiddenPowerShell(encoded, tag)) dbg(`toast SENT tag=${tag} title="${title}"`)
 }
 
 // Shared notification pipeline: both entrypoints (V1 `server`, V2 `setup`)
 // feed (eventType, payload) here. `getSession(sessionID)` resolves a
 // session or throws/returns undefined when it cannot be read.
-function createPipeline({ getSession, directory }) {
+// `locationProjectID` scopes V2 notifications to sessions owned by this
+// plugin instance's location: the server delivers every location's events
+// to every instance, so without it one event would toast once per loaded
+// location. V1 leaves it undefined (the V1 host already scopes events).
+function createPipeline({ getSession, directory, locationProjectID }) {
   const projectName = directory ? basename(directory) : ""
   const title = projectName ? `OpenCode \u00b7 ${projectName}` : "OpenCode"
 
-  const isChild = async (sessionID) => {
-    if (!sessionID) return false
-    if (childCache.has(sessionID)) return childCache.get(sessionID)
-    let child = false
+  // resolveSession reads (and caches) the ownership facts every handler
+  // needs: whether the session is a sub-agent child and which project it
+  // belongs to. Unknown sessions resolve to undefined and handlers fail
+  // open: a missed lookup must never swallow a notification.
+  const resolveSession = async (sessionID) => {
+    if (!sessionID) return undefined
+    if (sessionCache.has(sessionID)) return sessionCache.get(sessionID)
+    let info
     try {
       const res = await getSession(sessionID)
       const session = res?.data ?? res
-      child = Boolean(session?.parentID)
+      if (!session) return undefined
+      info = {
+        isChild: Boolean(session?.parentID),
+        projectID: typeof session?.projectID === "string" ? session.projectID : undefined,
+      }
     } catch {
-      child = false // fail open: a missed filter must never swallow a notification
+      return undefined
     }
-    childCache.set(sessionID, child)
-    return child
+    sessionCache.set(sessionID, info)
+    return info
+  }
+
+  const isChild = async (sessionID) => {
+    const info = await resolveSession(sessionID)
+    return info?.isChild ?? false
+  }
+
+  // ownsSession reports whether this instance is the session's owner.
+  // It only ever suppresses on positive evidence (both project ids known
+  // and different); unknown projects on either side fail open so a missed
+  // lookup can duplicate but never swallow a notification.
+  const ownsSession = async (sessionID) => {
+    if (!locationProjectID) return true
+    const info = await resolveSession(sessionID)
+    if (!info || !info.projectID) return true
+    return info.projectID === locationProjectID
   }
 
   const notify = (key, lines) => {
@@ -281,68 +333,148 @@ function createPipeline({ getSession, directory }) {
     }
   }
 
-  const handleIdle = async (p) => {
+  const handleStarted = (p) => {
+    const sid = p.sessionID ?? "unknown"
+    terminalSessions.delete(`done:${sid}`)
+    terminalSessions.delete(`failed:${sid}`)
+  }
+
+  const handleDone = async (p) => {
     const settings = loadPluginSettings()
     if (!settings.alerts.sessionIdle) return
+    const sid = p.sessionID ?? "unknown"
+    if (terminalSessions.has(`done:${sid}`) || terminalSessions.has(`failed:${sid}`)) return
+    if (!(await ownsSession(p.sessionID))) return
     if (await isChild(p.sessionID)) return
-    notify(`idle:${p.sessionID ?? "unknown"}`, [TEXTS[settings.lang].idle])
+    terminalSessions.set(`done:${sid}`, true)
+    notify(`idle:${sid}`, [TEXTS[settings.lang].idle])
   }
 
-  const handleError = async (p) => {
+  const handleInterrupted = async (p) => {
+    const settings = loadPluginSettings()
+    if (!settings.alerts.sessionIdle) return
+    const sid = p.sessionID ?? "unknown"
+    if (terminalSessions.has(`done:${sid}`) || terminalSessions.has(`failed:${sid}`)) return
+    if (!(await ownsSession(p.sessionID))) return
+    if (await isChild(p.sessionID)) return
+    terminalSessions.set(`done:${sid}`, true)
+    notify(`idle:${sid}`, [TEXTS[settings.lang].interrupted])
+  }
+
+  const handleFailed = async (p) => {
     const settings = loadPluginSettings()
     if (!settings.alerts.sessionError) return
+    const sid = p.sessionID ?? "unknown"
+    if (terminalSessions.has(`done:${sid}`) || terminalSessions.has(`failed:${sid}`)) return
+    if (!(await ownsSession(p.sessionID))) return
     if (await isChild(p.sessionID)) return
-    const detail = typeof p.error === "string" ? truncate(p.error) : ""
-    notify(`error:${p.sessionID ?? "unknown"}`, [TEXTS[settings.lang].error, detail])
+    terminalSessions.set(`failed:${sid}`, true)
+    notify(`error:${sid}`, [TEXTS[settings.lang].error, errorDetail(p.error)])
   }
 
-  const handlePermission = (p) => {
+  const handlePermission = async (p) => {
     const settings = loadPluginSettings()
     if (!settings.alerts.permissionAsked) return
-    notify(`perm:${p.id ?? p.sessionID ?? "unknown"}`, [TEXTS[settings.lang].permission])
+    const id = p.id ?? p.sessionID ?? "unknown"
+    if (askedPermissions.has(id)) return
+    if (!(await ownsSession(p.sessionID))) return
+    askedPermissions.add(id)
+    notify(`perm:${id}`, [TEXTS[settings.lang].permission])
   }
 
-  const handleQuestion = (p) => {
+  const handlePermissionReplied = (p) => {
+    const id = p.requestID ?? p.id
+    if (id === undefined) return
+    askedPermissions.delete(id)
+    lastSent.delete(`perm:${id}`)
+  }
+
+  const handleQuestion = async (p) => {
     const settings = loadPluginSettings()
     if (!settings.alerts.questionAsked) return
-    const raw = Array.isArray(p.questions) ? p.questions[0]?.question : undefined
-    notify(`question:${p.id ?? p.sessionID ?? "unknown"}`, [
+    // V2 nests the prompt under `form`; V1 carries `questions`.
+    const f = p.form ?? {}
+    const id = f.id ?? p.id ?? p.sessionID ?? "unknown"
+    if (askedForms.has(id)) return
+    if (!(await ownsSession(f.sessionID ?? p.sessionID))) return
+    askedForms.add(id)
+    const raw = typeof f.title === "string" && f.title.trim() !== ""
+      ? f.title
+      : Array.isArray(p.questions) ? p.questions[0]?.question : undefined
+    notify(`question:${id}`, [
       TEXTS[settings.lang].question,
       raw ? truncate(raw) : "",
     ])
   }
 
+  const handleFormClosed = (p) => {
+    const id = p.form?.id ?? p.id
+    if (id === undefined) return
+    askedForms.delete(id)
+    lastSent.delete(`question:${id}`)
+  }
+
   // Customs fire after the defaults: enabled entries bound to this
-  // event type, with the same child-session rule (idle/error filtered,
-  // everything else always notifies). One tag per custom id so same-kind
-  // toasts replace each other; the shared cooldown still applies.
+  // event type, with the same child-session rule for completion/error
+  // families (idle/error on either runtime), everything else always
+  // notifies. One tag per custom id so same-kind toasts replace each
+  // other; the shared cooldown still applies.
+  const CHILD_FILTERED = new Set(["session.idle", "session.error", "session.execution.succeeded", "session.execution.failed"])
   const handleCustoms = async (type, p) => {
     const settings = loadPluginSettings()
     for (const c of settings.customs) {
       if (!c.enabled || c.event !== type) continue
-      if ((type === "session.idle" || type === "session.error") && await isChild(p.sessionID)) continue
+      if (!(await ownsSession(p.sessionID))) continue
+      if (CHILD_FILTERED.has(type) && await isChild(p.sessionID)) continue
       const lines = c.body ? [c.title, truncate(c.body)] : [c.title]
       notify(`custom:${c.id}`, lines)
     }
   }
 
+  // Event names from both runtimes route here. V1 emits session.idle,
+  // session.error and question.asked; V2 emits session.execution.*,
+  // permission.* and form.* (permission.asked exists on both).
+  const HANDLED = new Set([
+    "session.idle", "session.error", "question.asked",
+    "session.execution.started", "session.execution.succeeded",
+    "session.execution.failed", "session.execution.interrupted",
+    "permission.asked", "permission.replied",
+    "form.created", "form.replied", "form.cancelled",
+  ])
   const dispatch = async (type, payload) => {
     try {
       const p = payload ?? {}
-      if (type === "session.idle") {
-        await handleIdle(p)
+      if (HANDLED.has(type)) dbg(`DISPATCH type=${type} sid=${p.sessionID ?? "(none)"}`)
+      if (type === "session.idle" || type === "session.execution.succeeded") {
+        await handleDone(p)
         return handleCustoms(type, p)
       }
-      if (type === "session.error") {
-        await handleError(p)
+      if (type === "session.error" || type === "session.execution.failed") {
+        await handleFailed(p)
+        return handleCustoms(type, p)
+      }
+      if (type === "session.execution.interrupted") {
+        await handleInterrupted(p)
+        return handleCustoms(type, p)
+      }
+      if (type === "session.execution.started") {
+        handleStarted(p)
         return handleCustoms(type, p)
       }
       if (type === "permission.asked") {
-        handlePermission(p)
+        await handlePermission(p)
         return handleCustoms(type, p)
       }
-      if (type === "question.asked") {
-        handleQuestion(p)
+      if (type === "permission.replied") {
+        handlePermissionReplied(p)
+        return handleCustoms(type, p)
+      }
+      if (type === "question.asked" || type === "form.created") {
+        await handleQuestion(p)
+        return handleCustoms(type, p)
+      }
+      if (type === "form.replied" || type === "form.cancelled") {
+        handleFormClosed(p)
         return handleCustoms(type, p)
       }
       return handleCustoms(type, p)
@@ -390,10 +522,11 @@ async function setup(ctx) {
   const directory = ctx.location.directory
   const pipeline = createPipeline({
     directory,
+    locationProjectID: ctx.location.project?.id,
     // V1 SDK results carry `{ data, error }`; the V2 client throws instead.
     getSession: (sessionID) => ctx.session.get({ sessionID }),
   })
-  dbg(`LOADED runtime=v2 id=${PLUGIN_ID} directory=${directory ?? "(none)"} title="${pipeline.title}"`)
+  dbg(`LOADED runtime=v2 id=${PLUGIN_ID} directory=${directory ?? "(none)"} project=${ctx.location.project?.id ?? "(none)"} title="${pipeline.title}"`)
 
   const abort = new AbortController()
   let listening = Promise.resolve()
@@ -415,9 +548,10 @@ async function setup(ctx) {
             const payload = event?.data ?? event?.properties ?? {}
             await pipeline.dispatch(event?.type, payload)
           }
-        } catch {
+        } catch (err) {
           // The stream ends or throws when the server restarts; events missed
           // while disconnected are lost, so reconnect below.
+          dbg(`SUBSCRIBE error=${String(err?.message ?? err)}`)
         }
         if (abort.signal.aborted) break
         await delayUnlessAborted(retryMs, abort.signal)
