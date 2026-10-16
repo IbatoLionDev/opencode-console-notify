@@ -61,13 +61,13 @@ func applyToggle(pluginsDir, spec string, stdout io.Writer) int {
 		return 1
 	}
 	switch strings.ToLower(strings.TrimSpace(key)) {
-	case "sessionidle", "session.idle", "idle":
+	case "sessionidle", "session.idle", "idle", "execution.succeeded", "session.execution.succeeded", "succeeded", "done":
 		s.Alerts.SessionIdle = on
-	case "sessionerror", "session.error", "error":
+	case "sessionerror", "session.error", "error", "execution.failed", "session.execution.failed", "failed":
 		s.Alerts.SessionError = on
 	case "permissionasked", "permission.asked", "permission", "perm":
 		s.Alerts.PermissionAsked = on
-	case "questionasked", "question.asked", "question":
+	case "questionasked", "question.asked", "question", "form.created", "form":
 		s.Alerts.QuestionAsked = on
 	default:
 		fmt.Fprintf(stdout, "Error: unknown alert %q (want sessionIdle|sessionError|permissionAsked|questionAsked)\n", key)

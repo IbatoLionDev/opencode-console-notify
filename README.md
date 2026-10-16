@@ -14,13 +14,14 @@ line mode everywhere.
 
 | Event | Meaning |
 | --- | --- |
-| `session.idle` | Task finished, waiting for input |
-| `session.error` | Something went wrong |
+| `session.execution.succeeded` | Task finished, waiting for input |
+| `session.execution.failed` | Something went wrong |
+| `session.execution.interrupted` | Run interrupted |
 | `permission.asked` | Permission needed to continue |
-| `question.asked` | OpenCode asked a question |
+| `form.created` | OpenCode asked a question |
 
-Child (sub-agent) sessions are filtered for `session.idle` / `session.error` so runs
-don't spam notifications. Blocking events (`permission.asked`, `question.asked`) always
+Child (sub-agent) sessions are filtered for completion/error so runs
+don't spam notifications. Blocking events (`permission.asked`, `form.created`) always
 notify, even from children, because they stop all progress until answered.
 
 ## Requirements
@@ -173,7 +174,7 @@ opencode-console-notify config --list-customs
 opencode-console-notify config --info
 ```
 
-Custom notifications bind your own title and body to any of the 48
+Custom notifications bind your own title and body to any of the 68
 subscribable OpenCode events (see `config --list-events`; noisy families
 are flagged). Manage them in the TUI customs panel (list, create, edit,
 delete, toggle) — they show in alerts tagged as custom and toggle like the

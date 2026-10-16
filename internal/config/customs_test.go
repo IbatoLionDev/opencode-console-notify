@@ -7,8 +7,8 @@ import (
 
 // Shared event fixtures so string literals are defined once.
 const (
-	testFileEditedEvent  = "file.edited"
-	testTodoUpdatedEvent = "todo.updated"
+	testToolSuccessEvent     = "session.tool.success"
+	testCompactionEndedEvent = "session.compaction.ended"
 )
 
 func TestMigrateV1KeepsBehavior(t *testing.T) {
@@ -31,7 +31,7 @@ func TestMigrateV1KeepsBehavior(t *testing.T) {
 
 func TestCustomCRUD(t *testing.T) {
 	s := Defaults()
-	id, err := AddCustom(&s, testFileEditedEvent, " Edited ", "saved")
+	id, err := AddCustom(&s, testToolSuccessEvent, " Edited ", "saved")
 	if err != nil {
 		t.Fatalf("add failed: %v", err)
 	}
@@ -41,7 +41,7 @@ func TestCustomCRUD(t *testing.T) {
 	if !s.CustomAlerts[0].Enabled {
 		t.Fatal("new customs must start enabled")
 	}
-	if ok, err := UpdateCustom(&s, id, testTodoUpdatedEvent, "Todos", ""); !ok || err != nil {
+	if ok, err := UpdateCustom(&s, id, testCompactionEndedEvent, "Todos", ""); !ok || err != nil {
 		t.Fatalf("update failed: ok=%v err=%v", ok, err)
 	}
 	if !ToggleCustom(&s, id) || FindCustom(s, id).Enabled {
@@ -53,7 +53,7 @@ func TestCustomCRUD(t *testing.T) {
 	if RemoveCustom(&s, id) || ToggleCustom(&s, id) {
 		t.Fatal("missing ids must report false")
 	}
-	if ok, _ := UpdateCustom(&s, id, testTodoUpdatedEvent, "x", ""); ok {
+	if ok, _ := UpdateCustom(&s, id, testCompactionEndedEvent, "x", ""); ok {
 		t.Fatal("update of missing id must report false")
 	}
 }
@@ -63,7 +63,7 @@ func TestCustomValidation(t *testing.T) {
 	if _, err := AddCustom(&s, "nope.missing", "T", ""); err == nil {
 		t.Fatal("unknown event must be rejected")
 	}
-	if _, err := AddCustom(&s, testFileEditedEvent, "   ", ""); err == nil {
+	if _, err := AddCustom(&s, testToolSuccessEvent, "   ", ""); err == nil {
 		t.Fatal("empty title must be rejected")
 	}
 	if len(s.CustomAlerts) != 0 {
@@ -73,7 +73,7 @@ func TestCustomValidation(t *testing.T) {
 
 func TestInvalidCustomsFilteredOnLoad(t *testing.T) {
 	dir := t.TempDir()
-	raw := `{"version":2,"lang":"en","alerts":{"sessionIdle":true,"sessionError":true,"permissionAsked":true,"questionAsked":true},"customAlerts":[{"id":"custom-1","event":"nope.missing","title":"T","body":"","enabled":true},{"id":"custom-2","event":"file.edited","title":"F","body":"","enabled":true}]}`
+	raw := `{"version":2,"lang":"en","alerts":{"sessionIdle":true,"sessionError":true,"permissionAsked":true,"questionAsked":true},"customAlerts":[{"id":"custom-1","event":"nope.missing","title":"T","body":"","enabled":true},{"id":"custom-2","event":"session.tool.success","title":"F","body":"","enabled":true}]}`
 	if err := os.WriteFile(SettingsPath(dir), []byte(raw), 0o644); err != nil {
 		t.Fatalf("seed failed: %v", err)
 	}
@@ -88,19 +88,19 @@ func TestInvalidCustomsFilteredOnLoad(t *testing.T) {
 
 func TestCustomsForEvent(t *testing.T) {
 	s := Defaults()
-	if _, err := AddCustom(&s, testFileEditedEvent, "A", ""); err != nil {
+	if _, err := AddCustom(&s, testToolSuccessEvent, "A", ""); err != nil {
 		t.Fatal(err)
 	}
-	id2, err := AddCustom(&s, testFileEditedEvent, "B", "")
+	id2, err := AddCustom(&s, testToolSuccessEvent, "B", "")
 	if err != nil {
 		t.Fatal(err)
 	}
 	ToggleCustom(&s, id2)
-	got := CustomsForEvent(s, testFileEditedEvent)
+	got := CustomsForEvent(s, testToolSuccessEvent)
 	if len(got) != 1 || got[0].Title != "A" {
 		t.Fatalf("want only enabled customs in order, got %+v", got)
 	}
-	if len(CustomsForEvent(s, testTodoUpdatedEvent)) != 0 {
+	if len(CustomsForEvent(s, testCompactionEndedEvent)) != 0 {
 		t.Fatal("other events must not match")
 	}
 }

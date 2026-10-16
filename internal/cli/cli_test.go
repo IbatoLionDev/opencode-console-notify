@@ -143,7 +143,7 @@ func TestRunConfigListFlags(t *testing.T) {
 	if code := Run([]string{"config", pluginsDirFlag, plugins, "--list-events"}, reg, &out, &errOut); code != 0 {
 		t.Fatalf("config --list-events exited %d: %s", code, errOut.String())
 	}
-	for _, want := range []string{"session.idle", "file.edited", "todo.updated"} {
+	for _, want := range []string{"session.execution.succeeded", "session.tool.called", "session.compaction.ended"} {
 		if !strings.Contains(out.String(), want) {
 			t.Fatalf("--list-events misses %q", want)
 		}
@@ -156,7 +156,7 @@ func TestRunConfigListFlags(t *testing.T) {
 	if err != nil {
 		t.Fatalf("load failed: %v", err)
 	}
-	if _, err := config.AddCustom(&s, "todo.updated", "Todos", ""); err != nil {
+	if _, err := config.AddCustom(&s, "session.tool.called", "Todos", ""); err != nil {
 		t.Fatalf("seed failed: %v", err)
 	}
 	if err := config.Save(plugins, s); err != nil {
