@@ -27,9 +27,12 @@ notify, even from children, because they stop all progress until answered.
 ## Requirements
 
 - OpenCode 1.18.29+ or 2.x
-- Windows 10 or 11, or Linux (any ANSI console; mouse needs an xterm-compatible terminal)
-- `notify-send` (`libnotify-bin`) on Linux for toasts
-- No administrator rights needed (Windows registers per-user in HKCU; Linux needs no registration)
+- Windows 10 or 11, Linux, or macOS (any ANSI console; mouse needs an
+  xterm-compatible terminal on Linux and macOS)
+- `notify-send` (`libnotify-bin`) on Linux for toasts; `osascript`
+  (built-in) on macOS
+- No administrator rights needed (Windows registers per-user in HKCU;
+  Linux and macOS need no registration)
 
 ## Install
 
@@ -47,6 +50,12 @@ irm https://raw.githubusercontent.com/IbatoLionDev/opencode-console-notify/main/
 
 ```sh
 curl -fsSL https://raw.githubusercontent.com/IbatoLionDev/opencode-console-notify/main/install.sh | sh
+```
+
+### Shell (macOS, one line)
+
+```sh
+curl -fsSL https://raw.githubusercontent.com/IbatoLionDev/opencode-console-notify/main/install-macos.sh | sh
 ```
 
 ### Go CLI binary
@@ -269,15 +278,15 @@ or re-run the PowerShell script with `-Uninstall`.
 
 ## Scope / roadmap
 
-Supported today: **Windows 10/11 and Linux**. Same plugin events,
-settings and config TUI on both (fullscreen included); Windows notifies
-via WinRT toasts with the per-user AUMID identity, Linux via
-`notify-send` with the app name. The mouse needs an xterm-compatible
-terminal; dumb terminals keep full keyboard support.
+Supported today: **Windows 10/11, Linux, and macOS**. Same plugin events,
+settings and config TUI on all three (fullscreen included); Windows notifies
+via WinRT toasts with the per-user AUMID identity, Linux via `notify-send`
+with the app name, macOS via `osascript` with the app name. The mouse needs
+an xterm-compatible terminal on Linux and macOS; dumb terminals keep full
+keyboard support.
 
-Not supported yet: **macOS** (needs `console_darwin.go`, an
-`osascript`/native backend and a no-op identity like Linux) and rich
-notification-center actions (buttons, images). Contributions welcome.
+Not supported yet: rich notification-center actions (buttons, images).
+Contributions welcome.
 
 ## License
 

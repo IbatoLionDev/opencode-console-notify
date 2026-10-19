@@ -1,4 +1,4 @@
-//go:build !windows && !linux
+//go:build !windows && !linux && !darwin
 
 // Stub for platforms with no toast backend yet (macOS is next): the
 // package keeps compiling everywhere, sending stays a clear error.
