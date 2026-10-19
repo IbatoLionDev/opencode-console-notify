@@ -1,8 +1,10 @@
-package config
+package config_test
 
 import (
 	"strings"
 	"testing"
+
+	"github.com/IbatoLionDev/opencode-console-notify/internal/config"
 )
 
 // Shared fixtures so string literals are defined once.
@@ -13,7 +15,7 @@ const (
 
 func TestCatalogHasDefaults(t *testing.T) {
 	for _, want := range []string{testSessionDoneEvent, "session.execution.failed", "permission.asked", "form.created"} {
-		if !IsKnownEvent(want) {
+		if !config.IsKnownEvent(want) {
 			t.Fatalf("catalog misses default event %q", want)
 		}
 	}
@@ -21,7 +23,7 @@ func TestCatalogHasDefaults(t *testing.T) {
 
 func TestCatalogHasNoDuplicates(t *testing.T) {
 	seen := map[string]bool{}
-	for _, e := range KnownEvents() {
+	for _, e := range config.KnownEvents() {
 		if e.Type == "" || e.DescEn == "" || e.DescEs == "" {
 			t.Fatalf("catalog entry incomplete: %+v", e)
 		}
@@ -36,24 +38,24 @@ func TestCatalogHasNoDuplicates(t *testing.T) {
 }
 
 func TestEventDescription(t *testing.T) {
-	if got := EventDescription(testSessionDoneEvent, "es"); !strings.Contains(got, "esperando") {
+	if got := config.EventDescription(testSessionDoneEvent, "es"); !strings.Contains(got, "esperando") {
 		t.Fatalf("spanish description missing, got %q", got)
 	}
-	if got := EventDescription(testSessionDoneEvent, "fr"); got != EventDescription(testSessionDoneEvent, "en") {
+	if got := config.EventDescription(testSessionDoneEvent, "fr"); got != config.EventDescription(testSessionDoneEvent, "en") {
 		t.Fatalf("unknown lang must fall back to english, got %q", got)
 	}
-	if got := EventDescription(testMissingEvent, "en"); got != testMissingEvent {
+	if got := config.EventDescription(testMissingEvent, "en"); got != testMissingEvent {
 		t.Fatalf("unknown event must echo, got %q", got)
 	}
 }
 
 func TestNoisySubset(t *testing.T) {
 	for _, want := range []string{"session.reasoning.delta", "session.tool.progress", "session.usage.updated", "skill.updated"} {
-		if !IsNoisyEvent(want) {
+		if !config.IsNoisyEvent(want) {
 			t.Fatalf("event %q must be flagged noisy", want)
 		}
 	}
-	if IsNoisyEvent(testSessionDoneEvent) || IsNoisyEvent(testMissingEvent) {
+	if config.IsNoisyEvent(testSessionDoneEvent) || config.IsNoisyEvent(testMissingEvent) {
 		t.Fatal("quiet and unknown events must not be noisy")
 	}
 }

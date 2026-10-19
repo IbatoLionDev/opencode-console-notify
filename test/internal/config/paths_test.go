@@ -1,14 +1,16 @@
-package config
+package config_test
 
 import (
 	"path/filepath"
 	"runtime"
 	"strings"
 	"testing"
+
+	"github.com/IbatoLionDev/opencode-console-notify/internal/config"
 )
 
 func TestResolvePluginsDir(t *testing.T) {
-	def, err := DefaultPluginsDir()
+	def, err := config.DefaultPluginsDir()
 	if err != nil {
 		t.Skipf("no home directory in this environment: %v", err)
 	}
@@ -30,7 +32,7 @@ func TestResolvePluginsDir(t *testing.T) {
 			if tt.windowsOnly && runtime.GOOS != "windows" {
 				t.Skip("backslash separators only exist on Windows")
 			}
-			got, err := ResolvePluginsDir(tt.override)
+			got, err := config.ResolvePluginsDir(tt.override)
 			if tt.wantErr && err == nil {
 				t.Fatal("expected error, got nil")
 			}
@@ -45,7 +47,7 @@ func TestResolvePluginsDir(t *testing.T) {
 }
 
 func TestDefaultPluginsDirLayout(t *testing.T) {
-	def, err := DefaultPluginsDir()
+	def, err := config.DefaultPluginsDir()
 	if err != nil {
 		t.Skipf("no home directory in this environment: %v", err)
 	}
@@ -53,7 +55,7 @@ func TestDefaultPluginsDirLayout(t *testing.T) {
 	if !strings.HasSuffix(def, wantSuffix) {
 		t.Fatalf("default %q does not end with %q", def, wantSuffix)
 	}
-	if got := PluginPath(def); !strings.HasSuffix(got, PluginFileName) {
-		t.Fatalf("plugin path %q does not end with %q", got, PluginFileName)
+	if got := config.PluginPath(def); !strings.HasSuffix(got, config.PluginFileName) {
+		t.Fatalf("plugin path %q does not end with %q", got, config.PluginFileName)
 	}
 }

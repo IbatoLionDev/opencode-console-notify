@@ -1,53 +1,24 @@
-package doctor
+package doctor_test
 
 import (
 	"bytes"
 	"errors"
 	"net/http"
 	"net/http/httptest"
-	"os"
 	"path/filepath"
 	"strings"
 	"testing"
 
 	"github.com/IbatoLionDev/opencode-console-notify/internal/aumid"
-	"github.com/IbatoLionDev/opencode-console-notify/internal/config"
+	"github.com/IbatoLionDev/opencode-console-notify/internal/doctor"
 	"github.com/IbatoLionDev/opencode-console-notify/internal/installer"
 	"github.com/IbatoLionDev/opencode-console-notify/internal/version"
-	"github.com/IbatoLionDev/opencode-console-notify/plugin"
 )
 
 var errTestBoom = errors.New("test registry failure")
 
-func seedPluginFileForHealth(t *testing.T, plugins string, seedFile, seedEmpty bool) {
-	t.Helper()
-	if !seedFile {
-		return
-	}
-	content := plugin.Source
-	if seedEmpty {
-		content = []byte{}
-	}
-	if err := os.WriteFile(config.PluginPath(plugins), content, 0o644); err != nil {
-		t.Fatalf("seed plugin file: %v", err)
-	}
-}
-
-func assertHealthReport(t *testing.T, report HealthReport, wantHealthy, wantPlugin, wantAUMID bool) {
-	t.Helper()
-	if report.Healthy() != wantHealthy {
-		t.Fatalf("Healthy() = %v, want %v (%+v)", report.Healthy(), wantHealthy, report)
-	}
-	if report.PluginOK != wantPlugin {
-		t.Fatalf("PluginOK = %v, want %v", report.PluginOK, wantPlugin)
-	}
-	if report.AUMIDOK != wantAUMID {
-		t.Fatalf("AUMIDOK = %v, want %v", report.AUMIDOK, wantAUMID)
-	}
-}
-
 func TestCheckHealthParityMatrix(t *testing.T) {
-	stubNotifier(t, "/bin/notify-send", nil)
+	doctor.StubNotifier(t, "/bin/notify-send", nil)
 	tests := []struct {
 		name        string
 		seedFile    bool
@@ -66,25 +37,25 @@ func TestCheckHealthParityMatrix(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			plugins := t.TempDir()
-			seedPluginFileForHealth(t, plugins, tt.seedFile, tt.seedEmpty)
+			doctor.SeedPluginFileForHealth(t, plugins, tt.seedFile, tt.seedEmpty)
 			reg := &aumid.FakeRegistry{Registered: tt.registered, DisplayName: aumid.AUMIDDisplayName}
 
-			report, err := CheckHealth(plugins, reg)
+			report, err := doctor.CheckHealth(plugins, reg)
 			if err != nil {
 				t.Fatalf("CheckHealth failed: %v", err)
 			}
-			assertHealthReport(t, report, tt.wantHealthy, tt.wantPlugin, tt.wantAUMID)
+			doctor.AssertHealthReport(t, report, tt.wantHealthy, tt.wantPlugin, tt.wantAUMID)
 		})
 	}
 }
 
 func TestDoctorExitCodesAndMessages(t *testing.T) {
-	stubNotifier(t, "/bin/notify-send", nil)
+	doctor.StubNotifier(t, "/bin/notify-send", nil)
 	plugins := t.TempDir()
 	reg := &aumid.FakeRegistry{}
 
 	var missing bytes.Buffer
-	if code := Doctor(plugins, reg, &missing); code == 0 {
+	if code := doctor.Doctor(plugins, reg, &missing); code == 0 {
 		t.Fatal("doctor on empty state must exit non-zero")
 	} else if code != 1 {
 		t.Fatalf("doctor on empty state exited %d, want 1", code)
@@ -97,7 +68,7 @@ func TestDoctorExitCodesAndMessages(t *testing.T) {
 		t.Fatalf("Install failed: %v", err)
 	}
 	var healthy bytes.Buffer
-	if code := Doctor(plugins, reg, &healthy); code != 0 {
+	if code := doctor.Doctor(plugins, reg, &healthy); code != 0 {
 		t.Fatalf("doctor after install exited %d, want 0:\n%s", code, healthy.String())
 	}
 	if !strings.Contains(healthy.String(), "Healthy") {
@@ -108,7 +79,7 @@ func TestDoctorExitCodesAndMessages(t *testing.T) {
 func TestDoctorReportsRegistryFailure(t *testing.T) {
 	plugins := t.TempDir()
 	reg := &aumid.FakeRegistry{StatusErr: errTestBoom}
-	if code := Doctor(plugins, reg, &bytes.Buffer{}); code == 0 {
+	if code := doctor.Doctor(plugins, reg, &bytes.Buffer{}); code == 0 {
 		t.Fatal("doctor with registry failure must exit non-zero")
 	}
 }
@@ -116,7 +87,7 @@ func TestDoctorReportsRegistryFailure(t *testing.T) {
 func TestDoctorAgainstMissingDirectory(t *testing.T) {
 	plugins := filepath.Join(t.TempDir(), "does-not-exist")
 	reg := &aumid.FakeRegistry{}
-	report, err := CheckHealth(plugins, reg)
+	report, err := doctor.CheckHealth(plugins, reg)
 	if err != nil {
 		t.Fatalf("CheckHealth failed: %v", err)
 	}
@@ -125,34 +96,20 @@ func TestDoctorAgainstMissingDirectory(t *testing.T) {
 	}
 }
 
-func seedHealthyInstall(t *testing.T, plugins string, reg *aumid.FakeRegistry) {
-	t.Helper()
-	if err := installer.Install(plugins, reg, &bytes.Buffer{}); err != nil {
-		t.Fatalf("Install failed: %v", err)
-	}
-}
-
-func swapRegistryURL(t *testing.T, url string) {
-	t.Helper()
-	old := registryURL
-	registryURL = url
-	t.Cleanup(func() { registryURL = old })
-}
-
 func TestDoctorPrintsUpdateNoticeWhenNewer(t *testing.T) {
-	stubNotifier(t, "/bin/notify-send", nil)
+	doctor.StubNotifier(t, "/bin/notify-send", nil)
 	plugins := t.TempDir()
 	reg := &aumid.FakeRegistry{}
-	seedHealthyInstall(t, plugins, reg)
+	doctor.SeedHealthyInstall(t, plugins, reg)
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
 		w.Write([]byte(`{"version":"9.9.9"}`))
 	}))
 	defer server.Close()
-	swapRegistryURL(t, server.URL)
+	doctor.SwapRegistryURL(t, server.URL)
 
 	var out bytes.Buffer
-	if code := Doctor(plugins, reg, &out); code != 0 {
+	if code := doctor.Doctor(plugins, reg, &out); code != 0 {
 		t.Fatalf("healthy doctor exited %d, want 0", code)
 	}
 	want := "Update available: " + version.Version + " -> 9.9.9"
@@ -162,20 +119,20 @@ func TestDoctorPrintsUpdateNoticeWhenNewer(t *testing.T) {
 }
 
 func TestDoctorStaysSilentWhenRegistryDown(t *testing.T) {
-	stubNotifier(t, "/bin/notify-send", nil)
+	doctor.StubNotifier(t, "/bin/notify-send", nil)
 	plugins := t.TempDir()
 	reg := &aumid.FakeRegistry{}
-	seedHealthyInstall(t, plugins, reg)
+	doctor.SeedHealthyInstall(t, plugins, reg)
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		// Empty on purpose: the handler must produce no usable response so
 		// the test server simulates a dead registry (it is closed right away).
 	}))
 	url := server.URL
 	server.Close()
-	swapRegistryURL(t, url)
+	doctor.SwapRegistryURL(t, url)
 
 	var out bytes.Buffer
-	if code := Doctor(plugins, reg, &out); code != 0 {
+	if code := doctor.Doctor(plugins, reg, &out); code != 0 {
 		t.Fatalf("healthy doctor with dead registry exited %d, want 0", code)
 	}
 	if strings.Contains(out.String(), "Update available") {
