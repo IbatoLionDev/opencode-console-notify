@@ -221,6 +221,22 @@ function notifySendAvailable() {
   return notifySendChecked
 }
 
+let osascriptChecked = null
+function osascriptAvailable() {
+  if (osascriptChecked !== null) return osascriptChecked
+  try {
+    const probed = spawnSync("osascript", ["-e", "return \"ok\""], {
+      stdio: "ignore",
+      windowsHide: true,
+      timeout: 5000,
+    })
+    osascriptChecked = !probed.error && probed.status === 0
+  } catch {
+    osascriptChecked = false
+  }
+  return osascriptChecked
+}
+
 // sendToastLinux mirrors sendToast over notify-send: same title/body,
 // same fire-and-forget shape. Tags/cooldowns stay in notify(); replace
 // semantics are a Windows-only nicety notify-send cannot promise.
@@ -245,6 +261,36 @@ function sendToastLinux(title, lines, tag) {
   } catch (err) {
     dbg(`toast THREW tag=${tag} err=${String(err?.message ?? err)}`)
   }
+}
+
+// sendToastDarwin mirrors sendToast over osascript: same title/body,
+// same fire-and-forget shape. Tags/cooldowns stay in notify().
+function sendToastDarwin(title, lines, tag) {
+  if (!osascriptAvailable()) {
+    dbg(`toast SKIP tag=${tag} reason=no-osascript`)
+    return
+  }
+  const body = [...lines].filter(Boolean).join("\n")
+  try {
+    const child = spawn(
+      "osascript",
+      ["-e", `display notification ${strAppleScript(body)} with title ${strAppleScript(title)}`],
+      { stdio: "ignore", windowsHide: true },
+    )
+    child.on("error", (err) => dbg(`toast FAIL tag=${tag} err=${String(err?.message ?? err)}`))
+    child.on("exit", (code) => {
+      if (code !== 0) dbg(`toast FAIL tag=${tag} exit=${code}`)
+    })
+    if (typeof child.unref === "function") child.unref()
+    dbg(`toast SENT tag=${tag} title="${title}"`)
+  } catch (err) {
+    dbg(`toast THREW tag=${tag} err=${String(err?.message ?? err)}`)
+  }
+}
+
+function strAppleScript(value) {
+  const esc = String(value).replace(/\\/g, "\\\\").replace(/"/g, '\\"')
+  return '"' + esc + '"'
 }
 
 function sendToast(title, lines, tag) {
@@ -330,6 +376,10 @@ function createPipeline({ getSession, directory, locationProjectID }) {
     }
     if (process.platform === "linux") {
       sendToastLinux(title, lines, key.split(":")[0])
+      return
+    }
+    if (process.platform === "darwin") {
+      sendToastDarwin(title, lines, key.split(":")[0])
     }
   }
 
