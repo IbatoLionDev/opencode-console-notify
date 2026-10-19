@@ -1,4 +1,4 @@
-package cli
+package cli_test
 
 import (
 	"bytes"
@@ -6,6 +6,7 @@ import (
 	"testing"
 
 	"github.com/IbatoLionDev/opencode-console-notify/internal/aumid"
+	"github.com/IbatoLionDev/opencode-console-notify/internal/cli"
 	"github.com/IbatoLionDev/opencode-console-notify/internal/config"
 	"github.com/IbatoLionDev/opencode-console-notify/internal/doctor"
 )
@@ -17,7 +18,7 @@ const configLangFlag = "--lang"
 
 func checkParseArgsCase(t *testing.T, args []string, wantCmd, wantDir string, wantErr, wantUsage bool) {
 	t.Helper()
-	cmd, dir, err := parseArgs(args)
+	cmd, dir, err := cli.ParseArgs(args)
 	if wantUsage {
 		if err == nil {
 			t.Fatal("expected usage signal, got nil error")
@@ -84,31 +85,31 @@ func TestRunDoctorEndToEnd(t *testing.T) {
 	reg := &aumid.FakeRegistry{}
 	var out, errOut bytes.Buffer
 
-	if code := Run([]string{"doctor", pluginsDirFlag, plugins}, reg, &out, &errOut); code == 0 {
+	if code := cli.Run([]string{"doctor", pluginsDirFlag, plugins}, reg, &out, &errOut); code == 0 {
 		t.Fatal("run doctor before install must exit non-zero")
 	}
-	if code := Run([]string{"install", pluginsDirFlag, plugins}, reg, &out, &errOut); code != 0 {
+	if code := cli.Run([]string{"install", pluginsDirFlag, plugins}, reg, &out, &errOut); code != 0 {
 		t.Fatalf("run install exited %d: %s", code, errOut.String())
 	}
 	out.Reset()
-	if code := Run([]string{"doctor", pluginsDirFlag, plugins}, reg, &out, &errOut); code != 0 {
+	if code := cli.Run([]string{"doctor", pluginsDirFlag, plugins}, reg, &out, &errOut); code != 0 {
 		t.Fatalf("run doctor after install exited %d:\n%s", code, out.String())
 	}
 	out.Reset()
-	if code := Run([]string{"uninstall", pluginsDirFlag, plugins}, reg, &out, &errOut); code != 0 {
+	if code := cli.Run([]string{"uninstall", pluginsDirFlag, plugins}, reg, &out, &errOut); code != 0 {
 		t.Fatalf("run uninstall exited %d: %s", code, errOut.String())
 	}
 }
 
 func TestParseConfigArgs(t *testing.T) {
-	cmd, _, rest, err := parseArgsFull([]string{"config", configLangFlag, "es"})
+	cmd, _, rest, err := cli.ParseArgsFull([]string{"config", configLangFlag, "es"})
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
 	if cmd != "config" || len(rest) != 2 || rest[0] != configLangFlag || rest[1] != "es" {
 		t.Fatalf("got (%q, %q)", cmd, rest)
 	}
-	if _, _, _, err := parseArgsFull([]string{"install", "extra"}); err == nil {
+	if _, _, _, err := cli.ParseArgsFull([]string{"install", "extra"}); err == nil {
 		t.Fatal("expected error for extra positional on install")
 	}
 }
@@ -118,18 +119,18 @@ func TestRunConfigFlags(t *testing.T) {
 	reg := &aumid.FakeRegistry{}
 	var out, errOut bytes.Buffer
 
-	if code := Run([]string{"config", pluginsDirFlag, plugins, configLangFlag, "es"}, reg, &out, &errOut); code != 0 {
+	if code := cli.Run([]string{"config", pluginsDirFlag, plugins, configLangFlag, "es"}, reg, &out, &errOut); code != 0 {
 		t.Fatalf("config --lang exited %d: %s", code, errOut.String())
 	}
 	out.Reset()
-	if code := Run([]string{"config", pluginsDirFlag, plugins, "--toggle", "sessionIdle=off"}, reg, &out, &errOut); code != 0 {
+	if code := cli.Run([]string{"config", pluginsDirFlag, plugins, "--toggle", "sessionIdle=off"}, reg, &out, &errOut); code != 0 {
 		t.Fatalf("config --toggle exited %d: %s", code, errOut.String())
 	}
 	out.Reset()
-	if code := Run([]string{"config", pluginsDirFlag, plugins, "--list-alerts"}, reg, &out, &errOut); code != 0 {
+	if code := cli.Run([]string{"config", pluginsDirFlag, plugins, "--list-alerts"}, reg, &out, &errOut); code != 0 {
 		t.Fatalf("config --list-alerts exited %d: %s", code, errOut.String())
 	}
-	if code := Run([]string{"config", pluginsDirFlag, plugins, "--toggle", "bogus=on"}, reg, &out, &errOut); code == 0 {
+	if code := cli.Run([]string{"config", pluginsDirFlag, plugins, "--toggle", "bogus=on"}, reg, &out, &errOut); code == 0 {
 		t.Fatal("config --toggle bogus must exit non-zero")
 	}
 }
@@ -140,7 +141,7 @@ func TestRunConfigListFlags(t *testing.T) {
 	var out, errOut bytes.Buffer
 
 	out.Reset()
-	if code := Run([]string{"config", pluginsDirFlag, plugins, "--list-events"}, reg, &out, &errOut); code != 0 {
+	if code := cli.Run([]string{"config", pluginsDirFlag, plugins, "--list-events"}, reg, &out, &errOut); code != 0 {
 		t.Fatalf("config --list-events exited %d: %s", code, errOut.String())
 	}
 	for _, want := range []string{"session.execution.succeeded", "session.tool.called", "session.compaction.ended"} {
@@ -149,7 +150,7 @@ func TestRunConfigListFlags(t *testing.T) {
 		}
 	}
 	out.Reset()
-	if code := Run([]string{"config", pluginsDirFlag, plugins, "--list-customs"}, reg, &out, &errOut); code != 0 {
+	if code := cli.Run([]string{"config", pluginsDirFlag, plugins, "--list-customs"}, reg, &out, &errOut); code != 0 {
 		t.Fatalf("config --list-customs exited %d: %s", code, errOut.String())
 	}
 	s, err := config.Load(plugins)
@@ -163,7 +164,7 @@ func TestRunConfigListFlags(t *testing.T) {
 		t.Fatalf("seed save failed: %v", err)
 	}
 	out.Reset()
-	if code := Run([]string{"config", pluginsDirFlag, plugins, "--list-customs"}, reg, &out, &errOut); code != 0 {
+	if code := cli.Run([]string{"config", pluginsDirFlag, plugins, "--list-customs"}, reg, &out, &errOut); code != 0 {
 		t.Fatalf("config --list-customs exited %d: %s", code, errOut.String())
 	}
 	for _, want := range []string{"custom-1", "Todos", "[custom]"} {
