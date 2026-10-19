@@ -220,3 +220,90 @@ jobs:
           node bin/opencode-console-notify.js doctor --plugins-dir "$pluginsDir"
           node bin/opencode-console-notify.js uninstall --plugins-dir "$pluginsDir"
           test ! -f "$dest" || { echo "plugin file still present after npm uninstall: $dest"; exit 1; }
+
+  # macOS runtime: Go build/vet/fmt/tests plus the install-macos.sh and
+  # install.sh smoke tests, all on macos-latest (bash). `test` runs here:
+  # macOS runners have a user session, so osascript can deliver.
+  macos:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+
+      - name: Build
+        run: go build ./...
+
+      - name: Vet
+        run: go vet ./...
+
+      - name: Check gofmt
+        run: |
+          diff="$(gofmt -l cmd internal plugin)"
+          if [ -n "$diff" ]; then
+            echo 'gofmt found unformatted files:'
+            echo "$diff"
+            exit 1
+          fi
+
+      - name: Test
+        run: go test ./... -count=1
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Node syntax check (bin + lib + plugin)
+        run: |
+          set -euo pipefail
+          find bin lib plugin -name '*.js' | while read -r f; do node --check "$f"; done
+
+      - name: Line-ending guard (LF only, no CR)
+        run: |
+          set -euo pipefail
+          if grep -q $'\r' install.sh install-macos.sh; then
+            echo 'CR bytes found in install.sh or install-macos.sh'
+            exit 1
+          fi
+
+      - name: npm pack dry run
+        run: npm pack --dry-run
+
+      - name: install-macos.sh smoke test
+        run: |
+          set -euo pipefail
+          pluginsDir="$(mktemp -d)/plugins"
+          dest="$pluginsDir/console-notify.js"
+          ./install-macos.sh --plugins-dir "$pluginsDir"
+          test -f "$dest" || { echo "plugin file missing after install: $dest"; exit 1; }
+          go run ./cmd/opencode-notify doctor --plugins-dir "$pluginsDir"
+          go run ./cmd/opencode-notify test
+          ./install-macos.sh --plugins-dir "$pluginsDir" --uninstall
+          test ! -f "$dest" || { echo "plugin file still present after uninstall: $dest"; exit 1; }
+
+      - name: install.sh smoke test (existing path, must also work on macOS)
+        run: |
+          set -euo pipefail
+          pluginsDir="$(mktemp -d)/plugins"
+          dest="$pluginsDir/console-notify.js"
+          ./install.sh --plugins-dir "$pluginsDir"
+          test -f "$dest" || { echo "plugin file missing after install: $dest"; exit 1; }
+          go run ./cmd/opencode-notify doctor --plugins-dir "$pluginsDir"
+          ./install.sh --plugins-dir "$pluginsDir" --uninstall
+          test ! -f "$dest" || { echo "plugin file still present after uninstall: $dest"; exit 1; }
+
+      - name: npm path smoke test
+        run: |
+          set -euo pipefail
+          pluginsDir="$(mktemp -d)/plugins"
+          dest="$pluginsDir/console-notify.js"
+          node bin/opencode-console-notify.js install --plugins-dir "$pluginsDir"
+          test -f "$dest" || { echo "plugin file missing after npm install: $dest"; exit 1; }
+          node bin/opencode-console-notify.js doctor --plugins-dir "$pluginsDir"
+          node bin/opencode-console-notify.js test
+          node bin/opencode-console-notify.js uninstall --plugins-dir "$pluginsDir"
+          test ! -f "$dest" || { echo "plugin file still present after npm uninstall: $dest"; exit 1; }

@@ -29,7 +29,8 @@
   ],
   "os": [
     "win32",
-    "linux"
+    "linux",
+    "darwin"
   ],
   "engines": {
     "node": ">=18"
