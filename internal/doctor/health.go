@@ -89,6 +89,8 @@ func checkNotifier(goos string, lookPath func(string) (string, error)) (bool, st
 		binary = "powershell.exe"
 	case "linux":
 		binary = "notify-send"
+	case "darwin":
+		binary = "osascript"
 	default:
 		return false, "MISSING (notifications not supported on " + goos + ")"
 	}
