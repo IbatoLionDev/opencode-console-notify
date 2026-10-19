@@ -1,4 +1,4 @@
-package tui
+package tui_test
 
 import (
 	"strings"
@@ -6,6 +6,7 @@ import (
 
 	"github.com/IbatoLionDev/opencode-console-notify/internal/config"
 	"github.com/IbatoLionDev/opencode-console-notify/internal/screen"
+	"github.com/IbatoLionDev/opencode-console-notify/internal/tui"
 )
 
 func firstCatalogMatch(t *testing.T, query string) int {
@@ -22,8 +23,8 @@ func firstCatalogMatch(t *testing.T, query string) int {
 
 func TestPickerRowsKeepsAllOnEmptyQuery(t *testing.T) {
 	dir := t.TempDir()
-	l, _ := newTestLoop(dir, "en", "")
-	items, indexMap := l.pickerRows("")
+	l, _ := tui.NewTestLoop(dir, "en", "")
+	items, indexMap := l.PickerRows("")
 	if len(items) != len(config.KnownEvents()) || len(indexMap) != len(items) {
 		t.Fatalf("empty query must keep %d rows, got %d", len(config.KnownEvents()), len(items))
 	}
@@ -36,8 +37,8 @@ func TestPickerRowsKeepsAllOnEmptyQuery(t *testing.T) {
 
 func TestPickerRowsMatchesAnywhereCaseInsensitive(t *testing.T) {
 	dir := t.TempDir()
-	l, _ := newTestLoop(dir, "en", "")
-	items, indexMap := l.pickerRows("SESS")
+	l, _ := tui.NewTestLoop(dir, "en", "")
+	items, indexMap := l.PickerRows("SESS")
 	if len(items) == 0 {
 		t.Fatal("SESS must match session events case-insensitively")
 	}
@@ -50,51 +51,51 @@ func TestPickerRowsMatchesAnywhereCaseInsensitive(t *testing.T) {
 			t.Fatalf("map points outside the catalog: %v", indexMap)
 		}
 	}
-	if _, indexMap := l.pickerRows("zzz-no-such-event"); len(indexMap) != 0 {
+	if _, indexMap := l.PickerRows("zzz-no-such-event"); len(indexMap) != 0 {
 		t.Fatal("impossible query must match nothing")
 	}
 }
 
 func TestPickerTypeKeyAppendsAndTrims(t *testing.T) {
-	if nq, ok := pickerTypeKey(screen.ParsedKey{Key: screen.KeyRune, Rune: 's'}, ""); !ok || nq != "s" {
+	if nq, ok := tui.PickerTypeKey(screen.ParsedKey{Key: screen.KeyRune, Rune: 's'}, ""); !ok || nq != "s" {
 		t.Fatalf("rune must append, got %q %v", nq, ok)
 	}
 	// q arrives as quit from the parser but types inside the picker.
-	if nq, ok := pickerTypeKey(screen.ParsedKey{Key: screen.KeyQuit, Rune: 'q'}, "s"); !ok || nq != "sq" {
+	if nq, ok := tui.PickerTypeKey(screen.ParsedKey{Key: screen.KeyQuit, Rune: 'q'}, "s"); !ok || nq != "sq" {
 		t.Fatalf("q must type, got %q %v", nq, ok)
 	}
-	if nq, ok := pickerTypeKey(screen.ParsedKey{Key: screen.KeyRune, Rune: 0x7f}, "sñ"); !ok || nq != "s" {
+	if nq, ok := tui.PickerTypeKey(screen.ParsedKey{Key: screen.KeyRune, Rune: 0x7f}, "sñ"); !ok || nq != "s" {
 		t.Fatalf("backspace must trim rune-aware, got %q %v", nq, ok)
 	}
-	if _, ok := pickerTypeKey(screen.ParsedKey{Key: screen.KeyRune, Rune: 0x7f}, ""); ok {
+	if _, ok := tui.PickerTypeKey(screen.ParsedKey{Key: screen.KeyRune, Rune: 0x7f}, ""); ok {
 		t.Fatal("backspace on empty query must not type")
 	}
-	if _, ok := pickerTypeKey(screen.ParsedKey{Key: screen.KeyUp}, "s"); ok {
+	if _, ok := tui.PickerTypeKey(screen.ParsedKey{Key: screen.KeyUp}, "s"); ok {
 		t.Fatal("arrows must not type")
 	}
 }
 
 func TestPickEventFiltersThenPicks(t *testing.T) {
 	dir := t.TempDir()
-	l, _ := newTestLoop(dir, "en", "sess\r")
+	l, _ := tui.NewTestLoop(dir, "en", "sess\r")
 	want := firstCatalogMatch(t, "sess")
-	if got := l.pickEvent(""); got != want {
+	if got := l.PickEvent(""); got != want {
 		t.Fatalf("pickEvent(sess+Enter) = %d, want %d", got, want)
 	}
 }
 
 func TestPickEventEscClearsThenBacksOut(t *testing.T) {
 	dir := t.TempDir()
-	l, _ := newTestLoop(dir, "en", "sess\x1b\x1b")
-	if got := l.pickEvent(""); got != -1 {
+	l, _ := tui.NewTestLoop(dir, "en", "sess\x1b\x1b")
+	if got := l.PickEvent(""); got != -1 {
 		t.Fatalf("pickEvent(Esc twice) = %d, want -1", got)
 	}
 }
 
 func TestPickEventEmptyMatchPicksNothing(t *testing.T) {
 	dir := t.TempDir()
-	l, _ := newTestLoop(dir, "en", "zzz-no-such-event\r")
-	if got := l.pickEvent(""); got != -1 {
+	l, _ := tui.NewTestLoop(dir, "en", "zzz-no-such-event\r")
+	if got := l.PickEvent(""); got != -1 {
 		t.Fatalf("pickEvent(no-match+Enter) = %d, want -1", got)
 	}
 }

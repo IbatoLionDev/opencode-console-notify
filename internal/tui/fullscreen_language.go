@@ -8,22 +8,22 @@ import (
 	"github.com/IbatoLionDev/opencode-console-notify/internal/screen"
 )
 
-func (l *screenLoop) runLanguage(sel *int) string {
+func (l *ScreenLoop) RunLanguage(sel *int) string {
 	items := []screen.Item{
-		{Label: "English", State: currentMark(l.lang == "en", l.lang)},
-		{Label: "Español", State: currentMark(l.lang == "es", l.lang)},
+		{Label: "English", State: currentMark(l.Lang == "en", l.Lang)},
+		{Label: "Español", State: currentMark(l.Lang == "es", l.Lang)},
 	}
 	if *sel < 0 || *sel >= len(items) {
-		*sel = langIndex(l.lang)
+		*sel = langIndex(l.Lang)
 	}
 	frame := screen.Frame{
-		Title:    i18n.T(l.lang, "lang.title"),
+		Title:    i18n.T(l.Lang, "lang.title"),
 		Items:    items,
 		Selected: *sel,
-		Footer:   i18n.T(l.lang, "footer.back"),
-		Height:   screen.FrameHeight(l.height),
+		Footer:   i18n.T(l.Lang, "footer.back"),
+		Height:   screen.FrameHeight(l.Height),
 	}
-	fmt.Fprint(l.out, screen.Render(frame, l.width))
+	fmt.Fprint(l.Out, screen.Render(frame, l.Width))
 	k, err := l.readKey()
 	if err != nil {
 		return "abort"
@@ -41,7 +41,7 @@ func (l *screenLoop) runLanguage(sel *int) string {
 	}
 	switch k.Key {
 	case screen.KeyEnter, screen.KeySpace:
-		if langIndex(l.lang) == 0 {
+		if langIndex(l.Lang) == 0 {
 			return l.setLanguage("es")
 		}
 		return l.setLanguage("en")
@@ -55,7 +55,7 @@ func (l *screenLoop) runLanguage(sel *int) string {
 // reporting the next view and whether the key was consumed. Wheel
 // flips between languages, hover moves the highlight, click picks
 // the row under the cursor.
-func (l *screenLoop) languageMouse(k screen.ParsedKey, items []screen.Item, sel *int) (string, bool) {
+func (l *ScreenLoop) languageMouse(k screen.ParsedKey, items []screen.Item, sel *int) (string, bool) {
 	if k.Key == screen.KeyMouseWheel {
 		if k.Wheel < 0 {
 			return l.setLanguage("en"), true
@@ -63,7 +63,7 @@ func (l *screenLoop) languageMouse(k screen.ParsedKey, items []screen.Item, sel 
 		return l.setLanguage("es"), true
 	}
 	if k.Key == screen.KeyMouseMotion {
-		if idx, ok := screen.ItemIndexAtRow(items, *sel, screen.FrameHeight(l.height), k.MouseY); ok {
+		if idx, ok := screen.ItemIndexAtRow(items, *sel, screen.FrameHeight(l.Height), k.MouseY); ok {
 			*sel = idx
 		}
 		return "language", true
@@ -71,7 +71,7 @@ func (l *screenLoop) languageMouse(k screen.ParsedKey, items []screen.Item, sel 
 	if k.Key != screen.KeyMouseClick {
 		return "", false
 	}
-	idx, ok := screen.ItemIndexAtRow(items, *sel, screen.FrameHeight(l.height), k.MouseY)
+	idx, ok := screen.ItemIndexAtRow(items, *sel, screen.FrameHeight(l.Height), k.MouseY)
 	if !ok {
 		return "language", true
 	}
@@ -96,9 +96,9 @@ func currentMark(active bool, lang string) string {
 	return ""
 }
 
-func (l *screenLoop) setLanguage(lang string) string {
-	l.lang = lang
-	l.settings.Lang = lang
+func (l *ScreenLoop) setLanguage(lang string) string {
+	l.Lang = lang
+	l.Settings.Lang = lang
 	if !l.persistSettings() {
 		return "abort"
 	}
