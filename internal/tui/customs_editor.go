@@ -16,22 +16,22 @@ import (
 const customsTitleKey = "customs.title"
 
 // customsAdd runs create: event picker, then title and body prompts.
-func (l *screenLoop) customsAdd() string {
+func (l *ScreenLoop) customsAdd() string {
 	events := config.KnownEvents()
-	idx := l.pickEvent("")
+	idx := l.PickEvent("")
 	if idx < 0 {
 		return "customs"
 	}
-	title, ok := l.readLineInput(i18n.T(l.lang, customsTitleKey), i18n.T(l.lang, "customs.titleLabel")+": ")
+	title, ok := l.readLineInput(i18n.T(l.Lang, customsTitleKey), i18n.T(l.Lang, "customs.titleLabel")+": ")
 	if !ok || strings.TrimSpace(title) == "" {
 		return "customs"
 	}
-	body, ok := l.readLineInput(i18n.T(l.lang, customsTitleKey), i18n.T(l.lang, "customs.bodyLabel")+" ("+i18n.T(l.lang, "customs.optional")+"): ")
+	body, ok := l.readLineInput(i18n.T(l.Lang, customsTitleKey), i18n.T(l.Lang, "customs.bodyLabel")+" ("+i18n.T(l.Lang, "customs.optional")+"): ")
 	if !ok {
 		return "customs"
 	}
-	if _, err := config.AddCustom(&l.settings, events[idx].Type, title, body); err != nil {
-		fmt.Fprintf(l.out, errorFormat, err)
+	if _, err := config.AddCustom(&l.Settings, events[idx].Type, title, body); err != nil {
+		fmt.Fprintf(l.Out, errorFormat, err)
 		return "abort"
 	}
 	if !l.persistSettings() {
@@ -42,33 +42,33 @@ func (l *screenLoop) customsAdd() string {
 
 // customsEdit re-prompts title and body (empty keeps current) plus the
 // event picker preselected on the current event.
-func (l *screenLoop) customsEdit(sel int) string {
-	if sel < 0 || sel >= len(l.settings.CustomAlerts) {
+func (l *ScreenLoop) customsEdit(sel int) string {
+	if sel < 0 || sel >= len(l.Settings.CustomAlerts) {
 		return "customs"
 	}
-	current := l.settings.CustomAlerts[sel]
-	title, ok := l.readLineInput(i18n.T(l.lang, customsTitleKey), i18n.T(l.lang, "customs.titleLabel")+" ["+current.Title+"]: ")
+	current := l.Settings.CustomAlerts[sel]
+	title, ok := l.readLineInput(i18n.T(l.Lang, customsTitleKey), i18n.T(l.Lang, "customs.titleLabel")+" ["+current.Title+"]: ")
 	if !ok {
 		return "customs"
 	}
 	if strings.TrimSpace(title) == "" {
 		title = current.Title
 	}
-	body, ok := l.readLineInput(i18n.T(l.lang, customsTitleKey), i18n.T(l.lang, "customs.bodyLabel")+" ["+current.Body+"]: ")
+	body, ok := l.readLineInput(i18n.T(l.Lang, customsTitleKey), i18n.T(l.Lang, "customs.bodyLabel")+" ["+current.Body+"]: ")
 	if !ok {
 		return "customs"
 	}
 	if strings.TrimSpace(body) == "" && current.Body != "" {
 		body = current.Body
 	}
-	idx := l.pickEvent(current.Event)
+	idx := l.PickEvent(current.Event)
 	if idx < 0 {
 		return "customs"
 	}
 	events := config.KnownEvents()
-	kept, err := config.UpdateCustom(&l.settings, current.ID, events[idx].Type, title, body)
+	kept, err := config.UpdateCustom(&l.Settings, current.ID, events[idx].Type, title, body)
 	if err != nil {
-		fmt.Fprintf(l.out, errorFormat, err)
+		fmt.Fprintf(l.Out, errorFormat, err)
 		return "abort"
 	}
 	if !kept {

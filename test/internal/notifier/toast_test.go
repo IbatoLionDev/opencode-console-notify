@@ -1,7 +1,9 @@
-package notifier
+package notifier_test
 
 import (
 	"testing"
+
+	"github.com/IbatoLionDev/opencode-console-notify/internal/notifier"
 )
 
 func TestEscapeToastXML(t *testing.T) {
@@ -17,7 +19,7 @@ func TestEscapeToastXML(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if got := escapeToastXML(tt.input); got != tt.want {
+			if got := notifier.EscapeToastXML(tt.input); got != tt.want {
 				t.Fatalf("got %q, want %q", got, tt.want)
 			}
 		})

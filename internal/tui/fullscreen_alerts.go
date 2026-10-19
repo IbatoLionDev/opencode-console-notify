@@ -31,8 +31,8 @@ func boolStateKey(on bool) string {
 	return "state.off"
 }
 
-func (l *screenLoop) toggleAlert(idx int) bool {
-	items := AllAlertItems(&l.settings, l.lang)
+func (l *ScreenLoop) toggleAlert(idx int) bool {
+	items := AllAlertItems(&l.Settings, l.Lang)
 	if idx < 0 || idx >= len(items) {
 		return true
 	}
@@ -40,17 +40,17 @@ func (l *screenLoop) toggleAlert(idx int) bool {
 	return l.persistSettings()
 }
 
-func (l *screenLoop) runAlerts(sel *int) string {
-	items := alertScreenItems(&l.settings, l.lang)
+func (l *ScreenLoop) RunAlerts(sel *int) string {
+	items := alertScreenItems(&l.Settings, l.Lang)
 	*sel = screen.ClampSelection(len(items), *sel)
 	frame := screen.Frame{
-		Title:    i18n.T(l.lang, "alerts.title"),
+		Title:    i18n.T(l.Lang, "alerts.title"),
 		Items:    items,
 		Selected: *sel,
-		Footer:   i18n.T(l.lang, "footer.toggle"),
-		Height:   screen.FrameHeight(l.height),
+		Footer:   i18n.T(l.Lang, "footer.toggle"),
+		Height:   screen.FrameHeight(l.Height),
 	}
-	fmt.Fprint(l.out, screen.Render(frame, l.width))
+	fmt.Fprint(l.Out, screen.Render(frame, l.Width))
 	k, err := l.readKey()
 	if err != nil {
 		return "abort"
@@ -84,13 +84,13 @@ func (l *screenLoop) runAlerts(sel *int) string {
 // alertsMouse handles one mouse report for the alerts view, reporting
 // the next view and whether the key was consumed. Wheel scrolls,
 // click toggles the row under the cursor.
-func (l *screenLoop) alertsMouse(k screen.ParsedKey, sel *int, items []screen.Item) (string, bool) {
+func (l *ScreenLoop) alertsMouse(k screen.ParsedKey, sel *int, items []screen.Item) (string, bool) {
 	if k.Key == screen.KeyMouseWheel {
 		*sel = screen.MoveSteps(len(items), *sel, k.Wheel)
 		return "alerts", true
 	}
 	if k.Key == screen.KeyMouseMotion {
-		if idx, ok := screen.ItemIndexAtRow(items, *sel, screen.FrameHeight(l.height), k.MouseY); ok {
+		if idx, ok := screen.ItemIndexAtRow(items, *sel, screen.FrameHeight(l.Height), k.MouseY); ok {
 			*sel = idx
 		}
 		return "alerts", true
@@ -98,7 +98,7 @@ func (l *screenLoop) alertsMouse(k screen.ParsedKey, sel *int, items []screen.It
 	if k.Key != screen.KeyMouseClick {
 		return "", false
 	}
-	idx, ok := screen.ItemIndexAtRow(items, *sel, screen.FrameHeight(l.height), k.MouseY)
+	idx, ok := screen.ItemIndexAtRow(items, *sel, screen.FrameHeight(l.Height), k.MouseY)
 	if !ok {
 		return "alerts", true
 	}

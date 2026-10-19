@@ -23,7 +23,7 @@ var registryClient = &http.Client{Timeout: 3 * time.Second}
 // fetchLatestVersion returns the newest published version, or "" on any
 // fetch/parse failure (callers treat "" as "no notice").
 func fetchLatestVersion() string {
-	resp, err := registryClient.Get(registryURL)
+	resp, err := registryClient.Get(RegistryURL)
 	if err != nil {
 		return ""
 	}

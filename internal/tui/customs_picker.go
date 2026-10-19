@@ -16,7 +16,7 @@ import (
 // returning the rows plus the event index behind each row. Matching is
 // a strict contiguous substring (case-insensitive) over the event type
 // or description, from any position; an empty query keeps everything.
-func (l *screenLoop) pickerRows(query string) ([]screen.Item, []int) {
+func (l *ScreenLoop) PickerRows(query string) ([]screen.Item, []int) {
 	events := config.KnownEvents()
 	q := strings.ToLower(query)
 	items := make([]screen.Item, 0, len(events))
@@ -27,7 +27,7 @@ func (l *screenLoop) pickerRows(query string) ([]screen.Item, []int) {
 			state = "!"
 		}
 		desc := e.DescEn
-		if l.lang == "es" {
+		if l.Lang == "es" {
 			desc = e.DescEs
 		}
 		if q != "" && !strings.Contains(strings.ToLower(e.Type), q) && !strings.Contains(strings.ToLower(desc), q) {
@@ -114,8 +114,8 @@ func pickerFooter(lang, query string, shown, total int) string {
 // navigation, mutating the query and selection in place. It returns the
 // picked event index and true when the picker is done (picked, or backed
 // out with -1).
-func (l *screenLoop) pickerStep(k screen.ParsedKey, query *string, sel *int, items []screen.Item, indexMap []int) (int, bool) {
-	if ns, pk, ok := pickerMouse(k, *sel, items, indexMap, screen.FrameHeight(l.height)); ok {
+func (l *ScreenLoop) PickerStep(k screen.ParsedKey, query *string, sel *int, items []screen.Item, indexMap []int) (int, bool) {
+	if ns, pk, ok := pickerMouse(k, *sel, items, indexMap, screen.FrameHeight(l.Height)); ok {
 		*sel = ns
 		if pk >= 0 {
 			return pk, true
@@ -149,7 +149,7 @@ func (l *screenLoop) pickerStep(k screen.ParsedKey, query *string, sel *int, ite
 // pickEvent renders the catalog as a scrollable filterable frame and
 // returns the chosen event index, or -1 on cancel. Noisy events carry
 // a "!" state mark.
-func (l *screenLoop) pickEvent(preselect string) int {
+func (l *ScreenLoop) PickEvent(preselect string) int {
 	sel := 0
 	events := config.KnownEvents()
 	for i, e := range events {
@@ -161,21 +161,21 @@ func (l *screenLoop) pickEvent(preselect string) int {
 	total := len(events)
 	query := ""
 	for {
-		items, indexMap := l.pickerRows(query)
+		items, indexMap := l.PickerRows(query)
 		sel = screen.ClampSelection(len(items), sel)
 		frame := screen.Frame{
-			Title:    i18n.T(l.lang, "customs.pickEvent"),
+			Title:    i18n.T(l.Lang, "customs.pickEvent"),
 			Items:    items,
 			Selected: sel,
-			Footer:   pickerFooter(l.lang, query, len(items), total),
-			Height:   screen.FrameHeight(l.height),
+			Footer:   pickerFooter(l.Lang, query, len(items), total),
+			Height:   screen.FrameHeight(l.Height),
 		}
-		fmt.Fprint(l.out, screen.Render(frame, l.width))
+		fmt.Fprint(l.Out, screen.Render(frame, l.Width))
 		k, err := l.readKey()
 		if err != nil {
 			return -1
 		}
-		if picked, done := l.pickerStep(k, &query, &sel, items, indexMap); done {
+		if picked, done := l.PickerStep(k, &query, &sel, items, indexMap); done {
 			return picked
 		}
 	}
@@ -183,7 +183,7 @@ func (l *screenLoop) pickEvent(preselect string) int {
 
 // pickEventView opens the read-only catalog from the panel (the fifth
 // option): any key walks back, Enter included.
-func (l *screenLoop) pickEventView() string {
-	l.pickEvent("")
+func (l *ScreenLoop) PickEventView() string {
+	l.PickEvent("")
 	return "customs"
 }

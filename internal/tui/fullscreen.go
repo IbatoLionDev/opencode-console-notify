@@ -13,21 +13,21 @@ import (
 	"github.com/IbatoLionDev/opencode-console-notify/internal/screen"
 )
 
-// screenLoop holds the fullscreen state. Width/height are injected so
+// ScreenLoop holds the fullscreen state. Width/height are injected so
 // tests drive the loop with scripted bytes.
-type screenLoop struct {
-	pluginsDir string
-	settings   config.Settings
-	lang       string
-	in         io.Reader
-	out        io.Writer
-	width      int
-	height     int
-	upgrade    func(io.Writer) int
+type ScreenLoop struct {
+	PluginsDir string
+	Settings   config.Settings
+	Lang       string
+	In         io.Reader
+	Out        io.Writer
+	Width      int
+	Height     int
+	Upgrade    func(io.Writer) int
 	pending    []byte
 }
 
-func (l *screenLoop) readKey() (screen.ParsedKey, error) {
+func (l *ScreenLoop) readKey() (screen.ParsedKey, error) {
 	for {
 		if len(l.pending) > 0 {
 			k, n := screen.ParseKey(l.pending)
@@ -41,7 +41,7 @@ func (l *screenLoop) readKey() (screen.ParsedKey, error) {
 			}
 		}
 		var chunk [16]byte
-		n, err := l.in.Read(chunk[:])
+		n, err := l.In.Read(chunk[:])
 		if n > 0 {
 			l.pending = append(l.pending, chunk[:n]...)
 			continue
@@ -54,9 +54,9 @@ func (l *screenLoop) readKey() (screen.ParsedKey, error) {
 
 // persistSettings saves the loop settings, reporting failures on the
 // screen; every view shares it.
-func (l *screenLoop) persistSettings() bool {
-	if err := config.Save(l.pluginsDir, l.settings); err != nil {
-		fmt.Fprintf(l.out, errorFormat, err)
+func (l *ScreenLoop) persistSettings() bool {
+	if err := config.Save(l.PluginsDir, l.Settings); err != nil {
+		fmt.Fprintf(l.Out, errorFormat, err)
 		return false
 	}
 	return true
@@ -64,16 +64,16 @@ func (l *screenLoop) persistSettings() bool {
 
 // doUpdate leaves the alternate screen first so upgrade output stays
 // visible, then runs the existing upgrade flow for this distribution.
-func (l *screenLoop) doUpdate(restore func()) int {
-	fmt.Fprint(l.out, screen.LeaveFrame())
+func (l *ScreenLoop) doUpdate(restore func()) int {
+	fmt.Fprint(l.Out, screen.LeaveFrame())
 	restore()
-	if l.upgrade != nil {
-		return l.upgrade(l.out)
+	if l.Upgrade != nil {
+		return l.Upgrade(l.Out)
 	}
 	return 0
 }
 
-func (l *screenLoop) loop(restore func()) int {
+func (l *ScreenLoop) Loop(restore func()) int {
 	menuSel := 0
 	alertSel := 0
 	customsSel := 0
@@ -82,15 +82,15 @@ func (l *screenLoop) loop(restore func()) int {
 	for {
 		switch view {
 		case "menu":
-			view = l.runMenu(&menuSel)
+			view = l.RunMenu(&menuSel)
 		case "alerts":
-			view = l.runAlerts(&alertSel)
+			view = l.RunAlerts(&alertSel)
 		case "customs":
-			view = l.runCustoms(&customsSel)
+			view = l.RunCustoms(&customsSel)
 		case "language":
-			view = l.runLanguage(&languageSel)
+			view = l.RunLanguage(&languageSel)
 		case "info":
-			view = l.runInfo()
+			view = l.RunInfo()
 		case "update":
 			return l.doUpdate(restore)
 		case "exit":
@@ -117,17 +117,17 @@ func RunFullscreen(pluginsDir string, stdin io.Reader, stdout io.Writer, upgrade
 	defer restore()
 	fmt.Fprint(stdout, screen.EnterFrame())
 	w, h := screen.Size()
-	l := &screenLoop{
-		pluginsDir: pluginsDir,
-		settings:   s,
-		lang:       i18n.Normalize(s.Lang),
-		in:         stdin,
-		out:        stdout,
-		width:      w,
-		height:     h,
-		upgrade:    upgrade,
+	l := &ScreenLoop{
+		PluginsDir: pluginsDir,
+		Settings:   s,
+		Lang:       i18n.Normalize(s.Lang),
+		In:         stdin,
+		Out:        stdout,
+		Width:      w,
+		Height:     h,
+		Upgrade:    upgrade,
 	}
-	code := l.loop(restore)
+	code := l.Loop(restore)
 	fmt.Fprint(stdout, screen.LeaveFrame())
 	return code
 }

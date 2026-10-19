@@ -54,17 +54,17 @@ func menuShortcut(r rune) string {
 	return ""
 }
 
-func (l *screenLoop) runMenu(sel *int) string {
-	items := menuScreenItems(l.lang)
+func (l *ScreenLoop) RunMenu(sel *int) string {
+	items := menuScreenItems(l.Lang)
 	*sel = screen.ClampSelection(len(items), *sel)
 	frame := screen.Frame{
-		Title:    i18n.T(l.lang, "app.title"),
+		Title:    i18n.T(l.Lang, "app.title"),
 		Items:    items,
 		Selected: *sel,
-		Footer:   i18n.T(l.lang, "footer.menu"),
-		Height:   screen.FrameHeight(l.height),
+		Footer:   i18n.T(l.Lang, "footer.menu"),
+		Height:   screen.FrameHeight(l.Height),
 	}
-	fmt.Fprint(l.out, screen.Render(frame, l.width))
+	fmt.Fprint(l.Out, screen.Render(frame, l.Width))
 	k, err := l.readKey()
 	if err != nil {
 		return "abort"
@@ -74,7 +74,7 @@ func (l *screenLoop) runMenu(sel *int) string {
 		return "menu"
 	}
 	if k.Key == screen.KeyMouseClick {
-		idx, ok := screen.ItemIndexAtRow(items, *sel, screen.FrameHeight(l.height), k.MouseY)
+		idx, ok := screen.ItemIndexAtRow(items, *sel, screen.FrameHeight(l.Height), k.MouseY)
 		if !ok {
 			return "menu"
 		}
@@ -82,7 +82,7 @@ func (l *screenLoop) runMenu(sel *int) string {
 		return menuTarget(idx)
 	}
 	if k.Key == screen.KeyMouseMotion {
-		if idx, ok := screen.ItemIndexAtRow(items, *sel, screen.FrameHeight(l.height), k.MouseY); ok {
+		if idx, ok := screen.ItemIndexAtRow(items, *sel, screen.FrameHeight(l.Height), k.MouseY); ok {
 			*sel = idx
 		}
 		return "menu"
@@ -106,15 +106,15 @@ func (l *screenLoop) runMenu(sel *int) string {
 	return "menu"
 }
 
-func (l *screenLoop) runInfo() string {
+func (l *ScreenLoop) RunInfo() string {
 	frame := screen.Frame{
-		Title:    i18n.T(l.lang, "menu.info"),
+		Title:    i18n.T(l.Lang, "menu.info"),
 		Items:    infoScreenItems(),
 		Selected: -1,
-		Footer:   i18n.T(l.lang, "footer.back"),
-		Height:   screen.FrameHeight(l.height),
+		Footer:   i18n.T(l.Lang, "footer.back"),
+		Height:   screen.FrameHeight(l.Height),
 	}
-	fmt.Fprint(l.out, screen.Render(frame, l.width))
+	fmt.Fprint(l.Out, screen.Render(frame, l.Width))
 	if k, err := l.readKey(); err != nil {
 		return "abort"
 	} else if k.Key == screen.KeyMouseMotion {

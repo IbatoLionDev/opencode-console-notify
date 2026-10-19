@@ -14,14 +14,14 @@ import (
 
 // readByte returns one input byte, draining buffered key bytes first so
 // text input never loses bytes to a previous split escape sequence.
-func (l *screenLoop) readByte() (byte, bool) {
+func (l *ScreenLoop) readByte() (byte, bool) {
 	if len(l.pending) > 0 {
 		b := l.pending[0]
 		l.pending = l.pending[1:]
 		return b, true
 	}
 	var one [1]byte
-	n, err := l.in.Read(one[:])
+	n, err := l.In.Read(one[:])
 	if n == 0 || err != nil {
 		return 0, false
 	}
@@ -30,7 +30,7 @@ func (l *screenLoop) readByte() (byte, bool) {
 
 // readRune decodes one rune incrementally so backspace never splits a
 // multibyte sequence.
-func (l *screenLoop) readRune() (rune, bool) {
+func (l *ScreenLoop) readRune() (rune, bool) {
 	var buf [4]byte
 	n := 0
 	for n < len(buf) {
@@ -49,28 +49,28 @@ func (l *screenLoop) readRune() (rune, bool) {
 
 // promptFrame renders the text prompt as a frame so input never leaves
 // the alternate screen; every keystroke redraws with the buffer.
-func (l *screenLoop) promptFrame(title, prompt string, buf []rune) {
+func (l *ScreenLoop) promptFrame(title, prompt string, buf []rune) {
 	frame := screen.Frame{
 		Title:    title,
 		Items:    []screen.Item{{Label: prompt + string(buf)}},
 		Selected: 0,
-		Footer:   i18n.T(l.lang, "customs.inputFooter"),
-		Height:   screen.FrameHeight(l.height),
+		Footer:   i18n.T(l.Lang, "customs.inputFooter"),
+		Height:   screen.FrameHeight(l.Height),
 	}
-	fmt.Fprint(l.out, screen.Render(frame, l.width))
+	fmt.Fprint(l.Out, screen.Render(frame, l.Width))
 	// Render ends with footer + trailing newline, so reposition the
 	// hardware cursor inside the input row after prompt+typed buffer.
-	col := screen.InputCursorCol(prompt, len(buf), l.width)
-	fmt.Fprint(l.out, screen.MoveCursor(screen.InputRow, col))
+	col := screen.InputCursorCol(prompt, len(buf), l.Width)
+	fmt.Fprint(l.Out, screen.MoveCursor(screen.InputRow, col))
 	// Drawn white block marks the insertion point; the hardware cursor
 	// stays hidden (EnterFrame hides, LeaveFrame restores).
-	fmt.Fprint(l.out, screen.CursorBlock())
+	fmt.Fprint(l.Out, screen.CursorBlock())
 }
 
 // swallowMouseReport discards one SGR mouse report whose ESC was already
 // consumed. It reports whether pending held a complete "[<...M/m"
 // report; anything else (a lone ESC press) is left for the caller.
-func (l *screenLoop) swallowMouseReport() bool {
+func (l *ScreenLoop) swallowMouseReport() bool {
 	for {
 		if len(l.pending) < 2 || l.pending[0] != '[' || l.pending[1] != '<' {
 			return false
@@ -86,7 +86,7 @@ func (l *screenLoop) swallowMouseReport() bool {
 			}
 		}
 		var chunk [16]byte
-		n, err := l.in.Read(chunk[:])
+		n, err := l.In.Read(chunk[:])
 		if n > 0 {
 			l.pending = append(l.pending, chunk[:n]...)
 			continue
@@ -102,8 +102,8 @@ func (l *screenLoop) swallowMouseReport() bool {
 // white block marks the insertion point while typing; the hardware
 // cursor stays hidden (HideCursor defer is safety — EnterFrame already
 // hides, LeaveFrame restores).
-func (l *screenLoop) readLineInput(frameTitle, prompt string) (string, bool) {
-	defer fmt.Fprint(l.out, screen.HideCursor)
+func (l *ScreenLoop) readLineInput(frameTitle, prompt string) (string, bool) {
+	defer fmt.Fprint(l.Out, screen.HideCursor)
 	var runes []rune
 	for {
 		l.promptFrame(frameTitle, prompt, runes)
