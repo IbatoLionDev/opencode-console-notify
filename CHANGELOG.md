@@ -3,6 +3,24 @@
 All notable changes to this project are documented here, newest first.
 Version headers link to the GitHub release when one exists.
 
+## [4.0.0] - Unreleased
+
+### Added
+
+- macOS support: identical fullscreen config TUI (same views, keys
+  j/k/arrows/Enter/Space, mouse hover/click/wheel, footer keys, en/es
+  language, customs panel) via `console_darwin.go` termios; line-mode
+  fallback when there is no real console. Notifications via `osascript`
+  (built-in), graceful when missing. Installs without a registry (the
+  identity is the app name). Install paths: `install-macos.sh`
+  (`curl | sh`, dedicated macOS installer), `install.sh` (POSIX shell,
+  works on macOS too), Go CLI binary (`opencode-notify-darwin`), and the
+  npm package (`"darwin"` added to `package.json` `"os"`). Per-OS
+  `upgrade`/`doctor`; `doctor` verifies plugin + `osascript`. CI on
+  `macos-latest` covering Go build/vet/gofmt/tests, install-macos.sh and
+  install.sh smoke tests, `doctor`, `test` via osascript, Node syntax
+  check, LF guard, npm smoke.
+
 ## [3.2.2] - 2026-10-16
 
 ### Fixed
