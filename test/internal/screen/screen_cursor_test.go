@@ -1,6 +1,10 @@
-package screen
+package screen_test
 
-import "testing"
+import (
+	"testing"
+
+	"github.com/IbatoLionDev/opencode-console-notify/internal/screen"
+)
 
 func TestMoveCursorFormatAndClamp(t *testing.T) {
 	cases := []struct {
@@ -17,18 +21,18 @@ func TestMoveCursorFormatAndClamp(t *testing.T) {
 	}
 	for _, tt := range cases {
 		t.Run(tt.name, func(t *testing.T) {
-			if got := MoveCursor(tt.row, tt.col); got != tt.want {
+			if got := screen.MoveCursor(tt.row, tt.col); got != tt.want {
 				t.Fatalf("MoveCursor(%d, %d) = %q, want %q", tt.row, tt.col, got, tt.want)
 			}
 		})
 	}
-	if InputRow != 3 {
-		t.Fatalf("InputRow = %d, want 3 (title=1, border=2, input=3)", InputRow)
+	if screen.InputRow != 3 {
+		t.Fatalf("InputRow = %d, want 3 (title=1, border=2, input=3)", screen.InputRow)
 	}
 }
 
 func TestCursorBlockIsWhiteCell(t *testing.T) {
-	if got := CursorBlock(); got != BgWhite+" "+Reset {
+	if got := screen.CursorBlock(); got != screen.BgWhite+" "+screen.Reset {
 		t.Fatalf("CursorBlock() = %q, want BgWhite+space+Reset", got)
 	}
 }
@@ -51,7 +55,7 @@ func TestInputCursorCol(t *testing.T) {
 	}
 	for _, tt := range cases {
 		t.Run(tt.name, func(t *testing.T) {
-			if got := InputCursorCol(tt.prompt, tt.typed, tt.width); got != tt.want {
+			if got := screen.InputCursorCol(tt.prompt, tt.typed, tt.width); got != tt.want {
 				t.Fatalf("InputCursorCol(%q, %d, %d) = %d, want %d", tt.prompt, tt.typed, tt.width, got, tt.want)
 			}
 		})
