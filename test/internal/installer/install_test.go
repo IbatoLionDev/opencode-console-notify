@@ -1,4 +1,4 @@
-package installer
+package installer_test
 
 import (
 	"bytes"
@@ -11,6 +11,7 @@ import (
 
 	"github.com/IbatoLionDev/opencode-console-notify/internal/aumid"
 	"github.com/IbatoLionDev/opencode-console-notify/internal/config"
+	"github.com/IbatoLionDev/opencode-console-notify/internal/installer"
 	"github.com/IbatoLionDev/opencode-console-notify/plugin"
 )
 
@@ -22,7 +23,7 @@ func TestInstallWritesEmbeddedPluginAtomically(t *testing.T) {
 	reg := &aumid.FakeRegistry{}
 
 	var out bytes.Buffer
-	if err := Install(plugins, reg, &out); err != nil {
+	if err := installer.Install(plugins, reg, &out); err != nil {
 		t.Fatalf("Install failed: %v", err)
 	}
 
@@ -64,14 +65,14 @@ func TestInstallIsIdempotent(t *testing.T) {
 	reg := &aumid.FakeRegistry{}
 
 	var first, second bytes.Buffer
-	if err := Install(plugins, reg, &first); err != nil {
+	if err := installer.Install(plugins, reg, &first); err != nil {
 		t.Fatalf("first Install failed: %v", err)
 	}
 	before, err := os.ReadFile(config.PluginPath(plugins))
 	if err != nil {
 		t.Fatalf("read after first install: %v", err)
 	}
-	if err := Install(plugins, reg, &second); err != nil {
+	if err := installer.Install(plugins, reg, &second); err != nil {
 		t.Fatalf("second Install failed: %v", err)
 	}
 	after, err := os.ReadFile(config.PluginPath(plugins))
@@ -89,7 +90,7 @@ func TestInstallIsIdempotent(t *testing.T) {
 func TestInstallPropagatesRegistryError(t *testing.T) {
 	plugins := t.TempDir()
 	reg := &aumid.FakeRegistry{EnsureErr: errTestBoom}
-	if err := Install(plugins, reg, &bytes.Buffer{}); err == nil {
+	if err := installer.Install(plugins, reg, &bytes.Buffer{}); err == nil {
 		t.Fatal("expected registry error, got nil")
 	}
 }
@@ -106,7 +107,7 @@ func TestUninstallRemovesOnlyItsOwnFile(t *testing.T) {
 	reg := &aumid.FakeRegistry{Registered: true, DisplayName: aumid.AUMIDDisplayName}
 
 	var out bytes.Buffer
-	if err := Uninstall(plugins, reg, &out); err != nil {
+	if err := installer.Uninstall(plugins, reg, &out); err != nil {
 		t.Fatalf("Uninstall failed: %v", err)
 	}
 
@@ -132,7 +133,7 @@ func TestUninstallIsIdempotentWhenNothingInstalled(t *testing.T) {
 	reg := &aumid.FakeRegistry{}
 
 	var out bytes.Buffer
-	if err := Uninstall(plugins, reg, &out); err != nil {
+	if err := installer.Uninstall(plugins, reg, &out); err != nil {
 		t.Fatalf("Uninstall of empty state failed: %v", err)
 	}
 	if !strings.Contains(out.String(), "nothing to remove") {
@@ -143,22 +144,22 @@ func TestUninstallIsIdempotentWhenNothingInstalled(t *testing.T) {
 func TestUninstallPropagatesRegistryError(t *testing.T) {
 	plugins := t.TempDir()
 	reg := &aumid.FakeRegistry{RemoveErr: errTestBoom}
-	if err := Uninstall(plugins, reg, &bytes.Buffer{}); err == nil {
+	if err := installer.Uninstall(plugins, reg, &bytes.Buffer{}); err == nil {
 		t.Fatal("expected registry error, got nil")
 	}
 }
 
 func TestIdentityLinesPerOS(t *testing.T) {
-	if got := identityInstalledLine("windows"); !strings.Contains(got, "AUMID:") || !strings.Contains(got, "HKCU") {
+	if got := installer.IdentityInstalledLine("windows"); !strings.Contains(got, "AUMID:") || !strings.Contains(got, "HKCU") {
 		t.Fatalf("windows install line must name the HKCU key, got %q", got)
 	}
-	if got := identityInstalledLine("linux"); !strings.Contains(got, "Identity:") || !strings.Contains(got, "no registry") {
+	if got := installer.IdentityInstalledLine("linux"); !strings.Contains(got, "Identity:") || !strings.Contains(got, "no registry") {
 		t.Fatalf("linux install line must name the app identity, got %q", got)
 	}
-	if got := identityRemovedLine("windows", true); !strings.Contains(got, "Removed AUMID") {
+	if got := installer.IdentityRemovedLine("windows", true); !strings.Contains(got, "Removed AUMID") {
 		t.Fatalf("windows remove line must confirm removal, got %q", got)
 	}
-	if got := identityRemovedLine("linux", false); !strings.Contains(got, "nothing to remove") {
+	if got := installer.IdentityRemovedLine("linux", false); !strings.Contains(got, "nothing to remove") {
 		t.Fatalf("linux remove line must report nothing to do, got %q", got)
 	}
 }
