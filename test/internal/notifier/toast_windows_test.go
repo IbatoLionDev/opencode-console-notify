@@ -1,16 +1,17 @@
 //go:build windows
 
-package notifier
+package notifier_test
 
 import (
 	"strings"
 	"testing"
 
 	"github.com/IbatoLionDev/opencode-console-notify/internal/aumid"
+	"github.com/IbatoLionDev/opencode-console-notify/internal/notifier"
 )
 
 func TestBuildToastScriptUsesSharedIdentity(t *testing.T) {
-	script := buildToastScript("OpenCode", "hello")
+	script := notifier.BuildToastScript("OpenCode", "hello")
 	for _, want := range []string{aumid.AUMID, "OpenCode", "hello", "ToastNotificationManager"} {
 		if !strings.Contains(script, want) {
 			t.Fatalf("toast script missing %q:\n%s", want, script)
@@ -19,8 +20,8 @@ func TestBuildToastScriptUsesSharedIdentity(t *testing.T) {
 }
 
 func TestEncodePowerShellRoundTrip(t *testing.T) {
-	script := buildToastScript("OpenCode", "a & b <test>")
-	encoded := encodePowerShell(script)
+	script := notifier.BuildToastScript("OpenCode", "a & b <test>")
+	encoded := notifier.EncodePowerShell(script)
 	if encoded == "" {
 		t.Fatal("encoded script must not be empty")
 	}

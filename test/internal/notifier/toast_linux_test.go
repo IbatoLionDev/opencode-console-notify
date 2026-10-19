@@ -1,14 +1,16 @@
 //go:build linux
 
-package notifier
+package notifier_test
 
 import (
 	"strings"
 	"testing"
+
+	"github.com/IbatoLionDev/opencode-console-notify/internal/notifier"
 )
 
 func TestBuildNotifySendArgs(t *testing.T) {
-	args := buildNotifySendArgs("OpenCode", "hello")
+	args := notifier.BuildNotifySendArgs("OpenCode", "hello")
 	if len(args) != 5 {
 		t.Fatalf("want 5 argv entries, got %q", args)
 	}
