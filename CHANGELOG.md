@@ -3,6 +3,17 @@
 All notable changes to this project are documented here, newest first.
 Version headers link to the GitHub release when one exists.
 
+## [4.0.1] - 2026-10-18
+
+### Fixed
+
+- Go doctor now recognizes `osascript` as the notifier backend on macOS
+  (darwin): `checkNotifier` previously fell through to
+  "notifications not supported on darwin", so `doctor` exited 1 and the
+  macos-latest CI job failed. Add `case darwin -> osascript` so the Go
+  doctor verifies the macOS end state (plugin + osascript) and exits 0
+  when healthy.
+
 ## [4.0.0] - 2026-10-18
 
 ### Added
