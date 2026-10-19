@@ -1,6 +1,6 @@
 {
   "name": "opencode-console-notify",
-  "version": "3.2.2",
+  "version": "4.0.0",
   "private": false,
   "type": "module",
   "scripts": {
