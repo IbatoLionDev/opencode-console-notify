@@ -3,6 +3,35 @@
 All notable changes to this project are documented here, newest first.
 Version headers link to the GitHub release when one exists.
 
+## [4.0.2] - 2026-10-23
+
+### Fixed
+
+- `doctor` now compares the installed plugin file byte for byte (SHA256)
+  against the packaged copy of this release. Equal bytes keep the exact
+  `OK (<path>)` report and exit 0; differing bytes report
+  `STALE (<path> differs from this release; run "opencode-console-notify
+  install" to rewrite it)`, fail the health check and exit 1, so a
+  package version report can no longer hide a stale plugin file (e.g. a
+  V1-shaped export the V2 loader rejects). The `MISSING` states (no file,
+  directory, empty) keep their wording and their precedence over the
+  content check.
+- `upgrade` keeps the `Already up to date.` fast path only when the
+  installed plugin bytes also match this release: with `latest <= local`
+  and differing bytes it prints `Already up to date, but the plugin file
+  differs from this release; reinstalling it.` and runs the same
+  reinstall path used after a real upgrade (fresh CLI `install`).
+  npm install failures leave the current install untouched, the
+  missing-fresh-CLI guidance and the post-upgrade messages are unchanged.
+- README troubleshooting points `doctor` users at the new STALE report
+  as the fix for `Plugin must export a default definition with an id and
+  an effect or setup function` when the package looks current.
+- The `opencode-notify.exe` / Linux / macOS Go binaries mirror the same
+  check against the plugin bytes embedded in each build, reporting
+  `STALE (<path> differs from this build; run "<program name> install"
+  to rewrite it)` and exiting 1, so every distribution surfaces a stale
+  install the same way.
+
 ## [4.0.1] - 2026-10-18
 
 ### Fixed
