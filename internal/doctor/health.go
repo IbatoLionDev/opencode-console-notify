@@ -6,13 +6,16 @@
 package doctor
 
 import (
+	"bytes"
 	"fmt"
 	"os"
 	"os/exec"
+	"path/filepath"
 	"runtime"
 
 	"github.com/IbatoLionDev/opencode-console-notify/internal/aumid"
 	"github.com/IbatoLionDev/opencode-console-notify/internal/config"
+	"github.com/IbatoLionDev/opencode-console-notify/plugin"
 )
 
 // HealthReport describes the install end state at one point in time.
@@ -35,6 +38,13 @@ func (r HealthReport) Healthy() bool { return r.PluginOK && r.AUMIDOK && r.Notif
 // unit tests point it at a stub, production leaves the default.
 var NotifierLookPath = exec.LookPath
 
+// ProgramBaseName resolves the running binary's own base name for the
+// STALE install hint (filepath.Base(os.Args[0]): opencode-notify.exe on
+// Windows, the linux/darwin binary name elsewhere). It is a variable
+// (not filepath.Base inline) so tests stay hermetic: unit tests pin it,
+// production leaves the default.
+var ProgramBaseName = func() string { return filepath.Base(os.Args[0]) }
+
 // CheckHealth inspects the plugin file, the AUMID registration, and the
 // notifier backend available on this OS.
 func CheckHealth(pluginsDir string, reg aumid.Registry) (HealthReport, error) {
@@ -53,8 +63,19 @@ func CheckHealth(pluginsDir string, reg aumid.Registry) (HealthReport, error) {
 			report.PluginOK = false
 			report.PluginNote = fmt.Sprintf("MISSING (%s is empty)", report.PluginPath)
 		} else {
-			report.PluginOK = true
-			report.PluginNote = fmt.Sprintf("OK (%s)", report.PluginPath)
+			installed, err := os.ReadFile(report.PluginPath)
+			if err != nil {
+				return report, fmt.Errorf("read plugin file: %w", err)
+			}
+			if bytes.Equal(installed, plugin.Source) {
+				report.PluginOK = true
+				report.PluginNote = fmt.Sprintf("OK (%s)", report.PluginPath)
+			} else {
+				report.PluginOK = false
+				report.PluginNote = fmt.Sprintf(
+					"STALE (%s differs from this build; run \"%s install\" to rewrite it)",
+					report.PluginPath, ProgramBaseName())
+			}
 		}
 	case os.IsNotExist(err):
 		report.PluginOK = false

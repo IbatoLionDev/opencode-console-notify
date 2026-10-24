@@ -19,6 +19,15 @@ import (
 
 var errTestBoom = errors.New("test registry failure")
 
+// StubProgramBaseName pins the running-binary base name reported in the
+// STALE note so tests never depend on the test binary's own name.
+func StubProgramBaseName(t *testing.T, name string) {
+	t.Helper()
+	old := ProgramBaseName
+	ProgramBaseName = func() string { return name }
+	t.Cleanup(func() { ProgramBaseName = old })
+}
+
 // RegistryURL exposes registryURL (declared in notice.go) for black-box
 // tests that need to swap the update-notice endpoint.
 var RegistryURL = registryURL
