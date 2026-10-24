@@ -262,6 +262,12 @@ or re-run the PowerShell script with `-Uninstall`.
 
 ## Troubleshooting
 
+- **"Plugin must export a default definition with an id and an effect or
+  setup function" although the package looks current** — the plugin file
+  on disk is stale: `doctor` reports it as `STALE (<path> differs from
+  this release; run "opencode-console-notify install" to rewrite it)`;
+  `install` (or `upgrade`) rewrites it from this release, then restart
+  OpenCode.
 - **No notifications** — run `doctor` (`opencode-notify.exe doctor` on
   Windows, `./opencode-notify-linux doctor` or `opencode-console-notify doctor`
   on Linux); it reports exactly what is missing. On Linux a missing
